@@ -1,0 +1,59 @@
+# Markdansi
+
+Tiny, dependency-light Markdown → ANSI renderer and CLI for modern Node (>=22). Focuses on readable terminal output with sensible wrapping, GFM support (tables, task lists, strikethrough), optional OSC‑8 hyperlinks, and zero built‑in syntax highlighting (pluggable hook).
+
+## Install
+
+```bash
+pnpm add markdansi
+# or
+npm install markdansi
+```
+
+## CLI
+
+```bash
+markdansi [--in FILE] [--out FILE] [--width N] [--no-wrap] [--no-color] [--no-links] [--theme default|dim|bright]
+```
+
+- Input: stdin if `--in` not given (use `--in -` for stdin explicitly).
+- Output: stdout unless `--out` provided.
+- Wrapping: on by default; `--no-wrap` disables hard wrapping.
+- Links: OSC‑8 when supported; `--no-links` disables.
+
+## Library
+
+```js
+import { render, createRenderer, strip } from 'markdansi';
+
+const ansi = render('# Hello **world**', { width: 60 });
+
+const renderNoWrap = createRenderer({ wrap: false });
+const out = renderNoWrap('A very long line...');
+
+// Plain text (no ANSI/OSC)
+const plain = strip('link to [x](https://example.com)');
+```
+
+### Options
+
+- `wrap` (default `true`): if `false`, no hard wrapping anywhere.
+- `width`: used only when `wrap===true`; default TTY columns or 80.
+- `color` (default TTY): `false` removes all ANSI/OSC.
+- `hyperlinks` (default auto): enable/disable OSC‑8 links.
+- `theme`: `default | dim | bright` or custom theme object.
+- `highlighter(code, lang)`: optional hook to recolor code blocks; must not add/remove newlines.
+
+## Status
+
+Version: `0.1.0`  
+Tests: `pnpm test`  
+License: MIT
+
+## Notes
+
+- Code blocks never hard‑wrap; long lines may overflow. If `lang` is present, a faint `[lang]` label is shown.
+- Tables are ASCII boxed, align using GFM alignment, and wrap cell text on spaces; very long words may overflow.
+- Tight vs loose lists follow GFM; task items render `[ ]` / `[x]`.
+
+See `docs/spec.md` for full behavior details.*** End Patch

@@ -105,12 +105,13 @@ function renderHr(ctx) {
 function renderBlockquote(node, ctx, indentLevel) {
   const content = renderChildren(node.children, ctx, indentLevel + 1);
   const prefix = ctx.style('│ ', ctx.options.theme.quote);
-  return content
+  const lines = content
     .join('')
     .split('\n')
     .map((l) => (l === '' ? '' : prefix + l))
     .join('\n')
-    .replace(/\n+$/, '') + '\n';
+    .replace(/\n+$/, '');
+  return [lines + '\n'];
 }
 
 function renderList(node, ctx, indentLevel) {

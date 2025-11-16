@@ -28,6 +28,14 @@
   "engines": {
     "node": ">=22"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/steipete/Markdansi.git"
+  },
+  "bugs": {
+    "url": "https://github.com/steipete/Markdansi/issues"
+  },
+  "homepage": "https://github.com/steipete/Markdansi#readme",
   "author": "",
   "license": "MIT",
   "dependencies": {
