@@ -43,6 +43,12 @@ describe("wrapping", () => {
 		});
 		expect(out.split("\n")[0].length).toBeGreaterThan(20);
 	});
+
+	it("allows long url to overflow without breaking word", () => {
+		const url = "https://example.com/averylongpathwithoutspaces";
+		const out = strip(url, { ...noColor, width: 10, wrap: true });
+		expect(out).toContain(url);
+	});
 });
 
 describe("lists and tasks", () => {
@@ -50,6 +56,11 @@ describe("lists and tasks", () => {
 		const out = strip("- [ ] open\n- [x] done", noColor);
 		expect(out).toContain("[ ] open");
 		expect(out).toContain("[x] done");
+	});
+
+	it("splits loose lists with blank line", () => {
+		const out = strip("- item 1\n\n- item 2", noColor);
+		expect(out.split("\n").filter((l) => l === "").length).toBeGreaterThan(0);
 	});
 });
 
@@ -89,6 +100,22 @@ describe("tables", () => {
 		const out = strip(md, { ...noColor, width: 10, wrap: true });
 		expect(out).toContain(word);
 	});
+
+	it("respects table alignment markers from GFM", () => {
+		const md = `
+| h1 | h2 |
+| :-- | --: |
+| left | right |
+`;
+		const out = strip(md, { ...noColor, width: 30, wrap: true });
+		const lines = out
+			.trim()
+			.split("\n")
+			.filter((l) => l.startsWith("|"));
+		expect(lines.some((l) => l.includes("left") && l.includes("right"))).toBe(
+			true,
+		);
+	});
 });
 
 describe("hyperlinks", () => {
@@ -116,5 +143,12 @@ describe("hyperlinks", () => {
 		});
 		expect(out).not.toContain("\u001B]8;;");
 		expect(out).toContain("x (https://example.com)");
+	});
+});
+
+describe("blockquotes", () => {
+	it("prefixes lines with quote leader", () => {
+		const out = strip("> quoted line", noColor);
+		expect(out.trim().startsWith("│ ")).toBe(true);
 	});
 });
