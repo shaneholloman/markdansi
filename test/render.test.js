@@ -48,6 +48,29 @@ describe('tables', () => {
     const out = strip(md, { ...noColor, width: 30 });
     expect(out).toContain('| h1 | h2 |');
   });
+
+  it('wraps table cells on spaces when width is small', () => {
+    const md = `
+| h1 | h2 |
+| --- | --- |
+| a b c d e f | g |
+`;
+    const out = strip(md, { ...noColor, width: 15, wrap: true });
+    const lines = out.trim().split('\n').filter(l => l.startsWith('|'));
+    // Expect more than header + divider + single body line => wrapping produced extra line
+    expect(lines.length).toBeGreaterThan(3);
+  });
+
+  it('allows long words in cells to overflow (no hard break)', () => {
+    const word = 'Supercalifragilistic';
+    const md = `
+| h1 | h2 |
+| --- | --- |
+| ${word} | x |
+`;
+    const out = strip(md, { ...noColor, width: 10, wrap: true });
+    expect(out).toContain(word);
+  });
 });
 
 describe('hyperlinks', () => {
