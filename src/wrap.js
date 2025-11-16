@@ -1,0 +1,46 @@
+import stripAnsi from 'strip-ansi';
+import stringWidth from 'string-width';
+
+export function visibleWidth(text) {
+  return stringWidth(stripAnsi(text));
+}
+
+/**
+ * Wrap a single paragraph string into lines respecting visible width.
+ * Breaks only on spaces. Words longer than width overflow.
+ */
+export function wrapText(text, width, wrap) {
+  if (!wrap || width <= 0) return [text];
+  const words = text.split(/(\s+)/).filter(w => w.length > 0);
+  const lines = [];
+  let current = '';
+  let currentWidth = 0;
+
+  for (const word of words) {
+    const w = visibleWidth(word);
+    const sep = current === '' ? 0 : 1; // potential space already in word split
+    if (current !== '' && currentWidth + w > width && !/^\s+$/.test(word)) {
+      lines.push(current);
+      current = word.replace(/^\s+/, '');
+      currentWidth = visibleWidth(current);
+      continue;
+    }
+    current += word;
+    currentWidth = visibleWidth(current);
+  }
+
+  if (current !== '') lines.push(current);
+  if (lines.length === 0) lines.push('');
+  return lines;
+}
+
+export function wrapWithPrefix(text, width, wrap, prefix = '') {
+  if (!wrap) return text.split('\n').map(line => prefix + line);
+  const out = [];
+  const w = Math.max(1, width - visibleWidth(prefix));
+  for (const line of text.split('\n')) {
+    const parts = wrapText(line, w, wrap);
+    for (const p of parts) out.push(prefix + p);
+  }
+  return out;
+}

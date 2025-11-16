@@ -1,0 +1,82 @@
+# Markdansi v1 – Design Spec
+
+Goal: Tiny, dependency‑light Markdown → ANSI renderer & CLI for Node ≥22, using pnpm. Output is terminal ANSI only (no HTML). Focus on readable defaults, sensible wrapping, and minimal runtime deps.
+
+## Core Dependencies (runtime)
+- `micromark`, `micromark-extension-gfm`, `micromark-util-combine-extensions`: GFM parsing (tables, task lists, strikethrough, autolink literals).
+- `chalk`: small, ESM‑only color/style helper.
+- `string-width`: correct visible width (emoji / wide chars).
+- `strip-ansi`: strip codes for width/wrapping.
+- `supports-hyperlinks`: detect OSC‑8 hyperlink support.
+
+Dev: `vitest`.
+
+## Surface Area
+### Library (ESM default, CJS export provided)
+`render(markdown: string, options?: RenderOptions): string`
+
+`createRenderer(options?: RenderOptions): (md: string) => string`
+
+`type RenderOptions = {`
+`  wrap?: boolean;            // default: true; if false => no hard wraps anywhere`
+`  width?: number;            // used only when wrap===true; default: TTY cols or 80`
+`  hyperlinks?: boolean;      // default: auto via supports-hyperlinks`
+`  color?: boolean;           // default: true if TTY; if false => no ANSI/OSC at all`
+`  theme?: ThemeName | Theme; // built-ins: default, dim, bright`
+`  highlighter?: (code: string, lang?: string) => string; // hook, must not add newlines`
+`}``
+
+`type Theme = { heading, strong, emph, code, link, quote, hr, listMarker, tableHeader, tableCell }`
+Each theme entry holds simple SGR intents (bold/italic/fg color names).
+
+`strip(markdown: string): string` — convenience: render with `color=false`, `hyperlinks=false`.
+
+### CLI
+`markdansi [--in FILE] [--out FILE] [--width N] [--no-wrap] [--no-color] [--no-links] [--theme default|dim|bright]`
+- Input: stdin if no `--in`.
+- Output: stdout if no `--out`.
+- Wrap: on by default; `--no-wrap` disables; width auto from TTY when not provided.
+- Links: OSC‑8 hyperlinks enabled when terminal supports; `--no-links` disables.
+
+## Feature Scope (v1)
+- Blocks: paragraphs, headings (1–6), blockquotes, fenced/indented code blocks, HR, tables, unordered/ordered lists, task lists.
+- Inline: strong, emphasis, code spans, autolinks/links, strikethrough (GFM `~~`), backslash escapes.
+- Code blocks: monospace dim box; if `lang` present, show a faint `[lang]` tag. Highlighter hook may recolor text but must not add/remove newlines. Code blocks never hard-wrap; long lines may overflow.
+- Tables: render with simple ASCII borders; align based on GFM alignment; wrap cell text respecting width.
+- Wrapping: word-wrap on spaces; uses `string-width` on stripped text. Preserve hard breaks; words longer than width are allowed to overflow. Code blocks ignore wrap.
+- Hyperlinks: OSC‑8 when supported and allowed; fallback to underlined text plus URL in parentheses.
+- Error handling: never throw on malformed emphasis; leave literals untouched if unmatched.
+
+## Rendering Pipeline
+1) **Parse** via micromark with combined GFM extensions → AST events.
+2) **Build light IR** (nodes: paragraph, heading, list, listItem, taskItem, table, tableRow, tableCell, code, inline text/emph/strong/del/code/link).
+3) **Render** to ANSI:
+   - Style map from theme to SGR codes.
+   - Wrap paragraphs/table cells using `string-width` + `strip-ansi`; wrap only breaks on spaces.
+   - OSC‑8 links when `hyperlinks` true; otherwise underline + optional URL suffix.
+   - Track active SGR for wrapping splits to re-open styles on new lines.
+
+## Themes (initial)
+- `default`: bold headings, blue links, cyan code, subtle quotes/hr.
+- `dim`: muted colors for low-contrast terminals.
+- `bright`: higher contrast variant.
+
+## Testing (vitest)
+- Unit: inline formatting (emph/strong/code/strike), links/hyperlinks on/off, wrap/no-wrap behavior, table alignment and wrapping, task lists, strikethrough.
+- Snapshot-ish string comparisons for representative documents (with colors off to avoid brittle codes).
+
+## Non-Goals (v1)
+- Images, footnotes, math, HTML passthrough, syntax highlighting bundle.
+
+## Notes
+- Highlighting: built-in is “label-only”; extensibility via `highlighter` hook. No extra deps added for highlighting.
+- ESM-first; provide CJS export entry for compatibility.
+
+## Behaviors & edge-case rules
+- Wrap/width precedence: `wrap=false` disables all hard wrapping; `width` is ignored in that mode. When `wrap=true`, width is `options.width ?? ttyColumns ?? 80`.
+- Color flag: `color=false` removes all ANSI/OSC output (no bold/italic/underline, no hyperlinks); output is plain text.
+- Hyperlinks fallback: inline links render as `label (url)` when OSC‑8 disabled; autolinks render as the URL only. URLs count toward width.
+- Highlighter hook: receives raw code and optional lang; may return ANSI-colored text but must not add or remove newlines. Markdansi owns indentation/padding; code blocks never hard-wrap.
+- Tables width algorithm: compute desired column widths from content (cap at e.g. 40). While total exceeds width, decrement widest columns until it fits; if even minimums won’t fit, allow overflow. Respect GFM alignment per column. Cells with newlines keep those breaks.
+- Lists: honor GFM tight vs loose lists (tight => no blank line between items; loose => blank line). Nesting indent = 2 spaces per level; bullets use `-`; ordered lists use input numbering.
+- Blockquotes: prefix each wrapped line with `│ `; quote content wraps with same padding as paragraphs.
