@@ -1,10 +1,10 @@
-import { fromMarkdown } from 'mdast-util-from-markdown';
-import { gfmFromMarkdown } from 'mdast-util-gfm';
-import { gfm as gfmSyntax } from 'micromark-extension-gfm';
+import { fromMarkdown } from "mdast-util-from-markdown";
+import { gfmFromMarkdown } from "mdast-util-gfm";
+import { gfm as gfmSyntax } from "micromark-extension-gfm";
 
 export function parse(markdown) {
-  return fromMarkdown(markdown, {
-    extensions: [gfmSyntax()],
-    mdastExtensions: [gfmFromMarkdown()],
-  });
+	return fromMarkdown(markdown, {
+		extensions: [gfmSyntax()],
+		mdastExtensions: [gfmFromMarkdown()],
+	});
 }

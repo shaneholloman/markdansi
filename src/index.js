@@ -1,7 +1,11 @@
-import { render as renderMarkdown, createRenderer } from './render.js';
+import { createRenderer, render as renderMarkdown } from "./render.js";
 
 export { renderMarkdown as render, createRenderer };
 
 export function strip(markdown, options = {}) {
-  return renderMarkdown(markdown, { ...options, color: false, hyperlinks: false });
+	return renderMarkdown(markdown, {
+		...options,
+		color: false,
+		hyperlinks: false,
+	});
 }
