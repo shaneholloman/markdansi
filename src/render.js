@@ -9,6 +9,7 @@ function resolveOptions(userOptions = {}) {
   const wrap = userOptions.wrap !== undefined ? userOptions.wrap : true;
   const baseWidth = userOptions.width ?? (wrap ? process.stdout.columns || 80 : undefined);
   const color = userOptions.color !== undefined ? userOptions.color : process.stdout.isTTY;
+  // OSC hyperlinks require color support; if color is off, force hyperlinks off too
   const hyperlinks =
     userOptions.hyperlinks !== undefined
       ? userOptions.hyperlinks
@@ -225,12 +226,14 @@ function renderTable(node, ctx) {
 
   cells.forEach((row) =>
     row.forEach((cell, idx) => {
+      // Cap each column to MAX_COL but keep at least 1
       widths[idx] = Math.max(widths[idx], Math.min(MAX_COL, visibleWidth(cell)));
     }),
   );
 
   const totalWidth = widths.reduce((a, b) => a + b, 0) + 3 * colCount + 1;
   if (ctx.options.wrap && ctx.options.width && totalWidth > ctx.options.width) {
+    // Shrink widest columns until the table fits; allow overflow if already at minima
     let over = totalWidth - ctx.options.width;
     while (over > 0) {
       const i = widths.indexOf(Math.max(...widths));
@@ -244,6 +247,7 @@ function renderTable(node, ctx) {
     const linesPerCol = row.map((cell, idx) =>
       wrapText(cell, widths[idx], ctx.options.wrap).map((l) => padCell(l, widths[idx])),
     );
+    // Row height = max wrapped lines in any column; pad shorter ones
     const height = Math.max(...linesPerCol.map((c) => c.length));
     const out = [];
     for (let i = 0; i < height; i += 1) {
