@@ -458,7 +458,7 @@ function renderCodeBlock(node: Code, ctx: RenderContext): string[] {
 		minInner,
 		labelRaw.length,
 	);
-	const topPadding = Math.max(0, innerWidth - labelRaw.length);
+	const topPadding = Math.max(0, innerWidth - labelRaw.length + 1);
 	const top =
 		labelRaw.length > 0
 			? `┌ ${labelStyled}${"─".repeat(topPadding)}┐`

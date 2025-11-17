@@ -389,9 +389,14 @@ ${Array.from({ length: 12 }, (_, i) => `l${i + 1}`).join("\n")}
 		const md = "```bash\nthis line is definitely longer than the label\n```";
 		const out = render(md, { color: false, wrap: false });
 		const firstLine = out.split("\n")[0];
+		const bodyLine = out.split("\n")[1];
+		const bottomLine = out.split("\n")[out.split("\n").length - 3];
 		expect(firstLine.startsWith("┌")).toBe(true);
 		expect(firstLine).toContain("[bash]");
 		expect(firstLine).toMatch(/┌ \[bash]─+┐/);
+		// Header width should match body/bottom widths
+		expect(firstLine.length).toBe(bodyLine.length);
+		expect(firstLine.length).toBe(bottomLine.length);
 	});
 
 	it("omits label when language is absent", () => {
