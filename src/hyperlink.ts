@@ -14,6 +14,9 @@ export function hyperlinkSupported(
 	return false;
 }
 
+/**
+ * Build an OSC-8 hyperlink sequence.
+ */
 export function osc8(url: string, text: string): string {
 	return `\u001B]8;;${url}\u0007${text}\u001B]8;;\u0007`;
 }

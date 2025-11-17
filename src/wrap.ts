@@ -1,6 +1,9 @@
 import stringWidth from "string-width";
 import stripAnsi from "strip-ansi";
 
+/**
+ * Visible width of a string, ignoring ANSI escape codes.
+ */
 export function visibleWidth(text: string): number {
 	return stringWidth(stripAnsi(text));
 }

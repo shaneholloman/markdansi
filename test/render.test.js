@@ -1,5 +1,7 @@
+import stripAnsi from "strip-ansi";
 import supportsHyperlinks from "supports-hyperlinks";
 import { describe, expect, it } from "vitest";
+import { parseArgs } from "../src/cli.ts";
 import { hyperlinkSupported } from "../src/hyperlink.ts";
 import { render, strip } from "../src/index.ts";
 import { createStyler, themes } from "../src/theme.ts";
@@ -111,6 +113,31 @@ describe("lists and tasks", () => {
 });
 
 describe("tables", () => {
+	it("renders ascii and no-border tables with padding/dense options", () => {
+		const md = `
+| h1 | h2 |
+| --- | --- |
+| a | b |
+`;
+		const ascii = strip(md, {
+			...noColor,
+			tableBorder: "ascii",
+			tablePadding: 2,
+		});
+		expect(ascii).toContain("+");
+		expect(ascii).toContain("h1");
+		expect(ascii).toContain("a");
+
+		const none = strip(md, {
+			...noColor,
+			tableBorder: "none",
+			tableDense: true,
+			tablePadding: 0,
+		});
+		expect(none).toContain("h1");
+		expect(none).toContain("b");
+	});
+
 	it("renders gfm tables", () => {
 		const md = `
 | h1 | h2 |
@@ -186,6 +213,35 @@ describe("tables", () => {
 		const out = strip(md, { ...noColor, width: 18, wrap: true });
 		expect(out).toContain("…");
 	});
+
+	it("keeps at least ellipsis when width extremely small", () => {
+		const md = `
+| h |
+| - |
+| verylong |
+`;
+		const out = strip(md, {
+			...noColor,
+			width: 4,
+			wrap: true,
+			tablePadding: 0,
+		});
+		expect(out).toMatch(/…/);
+	});
+
+	it("aligns left/center/right cells", () => {
+		const md = `
+| l | c | r |
+| :-- | :-: | --: |
+| a | b | c |
+`;
+		const out = strip(md, { ...noColor, width: 40, wrap: true });
+		const line = out
+			.split("\n")
+			.find((l) => l.includes("a") && l.includes("c"));
+		expect(line).toBeDefined();
+		expect(line.includes(" c ")).toBe(true);
+	});
 });
 
 describe("hyperlinks", () => {
@@ -246,6 +302,39 @@ describe("code blocks", () => {
 		expect(firstLine.length).toBeLessThanOrEqual(12);
 		expect(out).toContain("0123456789");
 	});
+
+	it("allows overflow when codeWrap is false", () => {
+		const md = "```\n0123456789ABCDEFG\n```";
+		const out = strip(md, {
+			...noColor,
+			width: 10,
+			codeWrap: false,
+			codeBox: false,
+		});
+		const firstLine = out.split("\n")[0];
+		expect(firstLine.length).toBeGreaterThan(15);
+	});
+
+	it("respects codeBox=false with gutter", () => {
+		const md = "```\nline1\nline2\n```";
+		const out = render(md, {
+			color: true,
+			codeBox: false,
+			codeGutter: true,
+			wrap: false,
+		});
+		const plain = stripAnsi(out);
+		expect(plain).toMatch(/^1\s+line1/m);
+		expect(plain).toMatch(/^2\s+line2/m);
+	});
+
+	it("formats gutter width for multi-digit lines", () => {
+		const md = `\`\`\`
+${Array.from({ length: 12 }, (_, i) => `l${i + 1}`).join("\n")}
+\`\`\``;
+		const out = render(md, { color: true, codeGutter: true, wrap: false });
+		expect(stripAnsi(out)).toContain("12 ");
+	});
 });
 
 describe("styling helpers", () => {
@@ -265,8 +354,53 @@ describe("styling helpers", () => {
 		expect(styled).toContain("\u001b[9m"); // strike
 	});
 
+	it("uses default theme colors (cyan inline, green block, yellow header)", () => {
+		const ansi = render("`inline`\n\n```\nblock\n```\n\n# H", {
+			color: true,
+			wrap: false,
+			codeBox: false,
+		});
+		expect(ansi).toContain("\u001b[36m"); // cyan inline code
+		expect(ansi).toContain("\u001b[32m"); // green block code
+	});
+
+	it("falls back to theme.code when inline/block absent", () => {
+		const ansi = render("`x`\n\n```\ny\n```", {
+			color: true,
+			wrap: false,
+			theme: { code: { color: "red" } },
+		});
+		expect(ansi).toContain("\u001b[31m");
+	});
+
 	it("returns plain text when color is disabled", () => {
 		const style = createStyler({ color: false });
 		expect(style("plain", { color: "red" })).toBe("plain");
+	});
+});
+
+describe("cli parse args", () => {
+	it("maps new flags to options", () => {
+		const args = parseArgs([
+			"node",
+			"cli",
+			"--table-border=ascii",
+			"--table-dense",
+			"--table-truncate=false",
+			"--table-padding",
+			"3",
+			"--code-wrap=false",
+			"--code-box=false",
+			"--code-gutter=true",
+		]);
+		expect(args).toMatchObject({
+			tableBorder: "ascii",
+			tableDense: true,
+			tableTruncate: false,
+			tablePadding: 3,
+			codeWrap: false,
+			codeBox: false,
+			codeGutter: true,
+		});
 	});
 });

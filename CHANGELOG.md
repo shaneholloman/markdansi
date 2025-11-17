@@ -6,6 +6,7 @@
 - Migrated codebase to TypeScript (NodeNext ESM), compiled output now in `dist/`.
 - Package entrypoints/bins point to compiled JS; `prepare` runs full compile.
 - Types now come from source; removed separate `types/` shim.
+- Added tests for table borders/padding/dense/truncate, code gutters/wrap box toggles, theme colors, and CLI flags.
 
 ## 0.1.1 (2025-11-17)
 

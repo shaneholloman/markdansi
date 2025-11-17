@@ -45,6 +45,9 @@ export const themes: Themes = {
 
 export type Styler = (text: string, style?: StyleIntent) => string;
 
+/**
+ * Create a Chalk-based styling helper that applies StyleIntent safely.
+ */
 export function createStyler({ color }: { color: boolean }): Styler {
 	const level = color ? 3 : 0;
 	const chalk = new Chalk({ level }) as ChalkInstance;

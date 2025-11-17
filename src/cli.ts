@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { render } from "./index.js";
 import type { RenderOptions, ThemeName } from "./types.js";
 
@@ -10,7 +11,10 @@ type CliArgs = Partial<RenderOptions> & {
 	help?: boolean;
 };
 
-function parseArgs(argv: string[]): CliArgs {
+/**
+ * Parse CLI arguments into RenderOptions-ish object (plus in/out paths).
+ */
+export function parseArgs(argv: string[]): CliArgs {
 	const args: CliArgs = {};
 	for (let i = 2; i < argv.length; i += 1) {
 		const a = argv[i];
@@ -18,7 +22,26 @@ function parseArgs(argv: string[]): CliArgs {
 		if (a === "--no-wrap") args.wrap = false;
 		else if (a === "--no-color") args.color = false;
 		else if (a === "--no-links") args.hyperlinks = false;
-		else if (a === "--in") {
+		else if (a === "--code-wrap=false") args.codeWrap = false;
+		else if (a === "--code-wrap=true") args.codeWrap = true;
+		else if (a === "--code-box=false") args.codeBox = false;
+		else if (a === "--code-box=true") args.codeBox = true;
+		else if (a === "--code-gutter=true") args.codeGutter = true;
+		else if (a === "--code-gutter=false") args.codeGutter = false;
+		else if (a.startsWith("--table-border="))
+			args.tableBorder = a.split("=")[1] as RenderOptions["tableBorder"];
+		else if (a === "--table-dense") args.tableDense = true;
+		else if (a === "--table-truncate=false") args.tableTruncate = false;
+		else if (a === "--table-truncate=true") args.tableTruncate = true;
+		else if (a === "--table-padding") {
+			const next = argv[i + 1];
+			if (next) args.tablePadding = Number(next);
+			i += 1;
+		} else if (a === "--table-ellipsis") {
+			const next = argv[i + 1];
+			if (next) args.tableEllipsis = next;
+			i += 1;
+		} else if (a === "--in") {
 			const next = argv[i + 1];
 			if (next) args.in = next;
 			i += 1;
@@ -46,6 +69,9 @@ function parseArgs(argv: string[]): CliArgs {
 	return args;
 }
 
+/**
+ * CLI entrypoint.
+ */
 function main(): void {
 	const args = parseArgs(process.argv);
 	if (args.help) {
@@ -59,6 +85,14 @@ function main(): void {
   --theme NAME        Theme (default|dim|bright)
   --list-indent N     Spaces per list nesting level (default: 2)
   --quote-prefix STR  Prefix for blockquotes (default: "│ ")
+  --table-border STR  unicode|ascii|none
+  --table-padding N   Spaces around table cell content
+  --table-dense       Fewer separator rows
+  --table-truncate    Default true; pass --table-truncate=false to disable
+  --table-ellipsis STR  Ellipsis text for truncation
+  --code-wrap[=true|false]   Wrap code lines (default true)
+  --code-box[=true|false]    Box code blocks (default true)
+  --code-gutter[=true|false] Show code line numbers (default false)
 `);
 		process.exit(0);
 	}
@@ -88,4 +122,10 @@ function main(): void {
 	}
 }
 
-main();
+// Only run the CLI when executed directly, not when imported for tests.
+const entryHref = process.argv[1]
+	? pathToFileURL(process.argv[1]).href
+	: undefined;
+if (import.meta.url === entryHref) {
+	main();
+}

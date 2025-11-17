@@ -5,10 +5,15 @@ import type { RenderOptions, Theme, ThemeName } from "./types.js";
 export { renderMarkdown as render, createRenderer, themes };
 export type { RenderOptions, Theme, ThemeName };
 
+/**
+ * Render Markdown to plain text (no ANSI, no hyperlinks) while preserving layout/wrapping.
+ */
 export function strip(markdown: string, options: RenderOptions = {}) {
 	return renderMarkdown(markdown, {
 		...options,
 		color: false,
 		hyperlinks: false,
+		// ensure flags like codeWrap/tableTruncate not lost
+		wrap: options.wrap ?? true,
 	});
 }

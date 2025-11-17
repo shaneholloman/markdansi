@@ -140,6 +140,9 @@ const TABLE_BOX = {
 	},
 };
 
+/**
+ * Render Markdown input to an ANSI string.
+ */
 export function render(
 	markdown: string,
 	userOptions: RenderOptions = {},
@@ -152,6 +155,9 @@ export function render(
 	return options.color ? body : stripAnsi(body);
 }
 
+/**
+ * Create a reusable renderer with fixed options.
+ */
 export function createRenderer(options?: RenderOptions) {
 	return (md: string) => render(md, options);
 }
