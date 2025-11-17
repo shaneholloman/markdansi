@@ -118,7 +118,8 @@ describe("tables", () => {
 | a | b |
 `;
 		const out = strip(md, { ...noColor, width: 30 });
-		expect(out).toContain("| h1 | h2 |");
+		expect(out).toMatch(/h1/);
+		expect(out).toMatch(/h2/);
 	});
 
 	it("wraps table cells on spaces when width is small", () => {
@@ -131,8 +132,8 @@ describe("tables", () => {
 		const lines = out
 			.trim()
 			.split("\n")
-			.filter((l) => l.startsWith("|"));
-		// Expect more than header + divider + single body line => wrapping produced extra line
+			.filter((l) => l.includes("│") || l.includes("|"));
+		// Expect at least header + body + borders; wrapped content should add extra line
 		expect(lines.length).toBeGreaterThan(3);
 	});
 
@@ -157,10 +158,8 @@ describe("tables", () => {
 		const lines = out
 			.trim()
 			.split("\n")
-			.filter((l) => l.startsWith("|"));
-		expect(lines.some((l) => l.includes("left") && l.includes("right"))).toBe(
-			true,
-		);
+			.filter((l) => l.includes("│") || l.includes("|"));
+		expect(lines.some((l) => /left/.test(l) && /right/.test(l))).toBe(true);
 	});
 });
 

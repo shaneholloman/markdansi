@@ -31,6 +31,14 @@ function resolveOptions(userOptions = {}) {
 	const highlighter = userOptions.highlighter;
 	const listIndent = userOptions.listIndent ?? 2;
 	const quotePrefix = userOptions.quotePrefix ?? "│ ";
+	const tableBorder = userOptions.tableBorder || "unicode";
+	const tablePadding = userOptions.tablePadding ?? 1;
+	const tableDense = userOptions.tableDense ?? false;
+	const tableTruncate = userOptions.tableTruncate ?? false;
+	const tableEllipsis = userOptions.tableEllipsis ?? "…";
+	const codeBox = userOptions.codeBox ?? true;
+	const codeGutter = userOptions.codeGutter ?? false;
+	const codeWrap = userOptions.codeWrap ?? false;
 	return {
 		wrap,
 		width: baseWidth,
@@ -40,11 +48,47 @@ function resolveOptions(userOptions = {}) {
 		highlighter,
 		listIndent,
 		quotePrefix,
+		tableBorder,
+		tablePadding,
+		tableDense,
+		tableTruncate,
+		tableEllipsis,
+		codeBox,
+		codeGutter,
+		codeWrap,
 	};
 }
 
 const HR_WIDTH = 40;
 const MAX_COL = 40;
+const TABLE_BOX = {
+	unicode: {
+		topLeft: "┌",
+		topRight: "┐",
+		bottomLeft: "└",
+		bottomRight: "┘",
+		hSep: "─",
+		vSep: "│",
+		tSep: "┬",
+		mSep: "┼",
+		bSep: "┴",
+		mLeft: "├",
+		mRight: "┤",
+	},
+	ascii: {
+		topLeft: "+",
+		topRight: "+",
+		bottomLeft: "+",
+		bottomRight: "+",
+		hSep: "-",
+		vSep: "|",
+		tSep: "+",
+		mSep: "+",
+		bSep: "+",
+		mLeft: "+",
+		mRight: "+",
+	},
+};
 
 export function render(markdown, userOptions = {}) {
 	const options = resolveOptions(userOptions);
@@ -193,18 +237,42 @@ function renderListItem(
 
 function renderCodeBlock(node, ctx) {
 	const theme = ctx.options.theme.blockCode || ctx.options.theme.inlineCode;
-	const label = node.lang ? ctx.style(`[${node.lang}] `, { dim: true }) : "";
-	let body = node.value ?? "";
-	if (ctx.options.highlighter) {
-		const res = ctx.options.highlighter(body, node.lang);
-		if (typeof res === "string") body = res;
-	} else {
-		body = body
-			.split("\n")
-			.map((l) => ctx.style(l, theme))
-			.join("\n");
+	const lines = (node.value ?? "").split("\n");
+	const gutterWidth = ctx.options.codeGutter
+		? String(lines.length).length + 2
+		: 0;
+	const contentLines = lines.map((line, idx) => {
+		const highlighted =
+			ctx.options.highlighter?.(line, node.lang) ?? ctx.style(line, theme);
+		if (!ctx.options.codeGutter) return highlighted;
+		const num = String(idx + 1).padStart(gutterWidth - 2, " ");
+		return `${ctx.style(num, { dim: true })} ${highlighted}`;
+	});
+
+	if (!ctx.options.codeBox) {
+		return [`${contentLines.join("\n")}\n\n`];
 	}
-	return [`${label}${body}\n\n`];
+
+	// Boxed block
+	const maxLine = Math.max(...contentLines.map((l) => visibleWidth(l)), 0);
+	const innerWidth = ctx.options.codeWrap
+		? Math.min(maxLine, ctx.options.width ?? maxLine)
+		: Math.max(maxLine, node.lang ? node.lang.length + 2 : 0);
+	const topLang = node.lang
+		? `${ctx.style(`[${node.lang}]`, { dim: true })} `
+		: "";
+	const h = "─".repeat(Math.max(innerWidth, topLang.length));
+	const top = `┌ ${topLang}${h.slice(topLang.length)}┐`;
+	const bottom = `└${"─".repeat(h.length + 1)}┘`;
+
+	const boxLines = contentLines.map((ln) => {
+		const pad = Math.max(0, h.length - visibleWidth(ln));
+		const left = ctx.style("│ ", { dim: true });
+		const right = ctx.style(" │", { dim: true });
+		return `${left}${ln}${" ".repeat(pad)}${right}`;
+	});
+
+	return [`${top}\n${boxLines.join("\n")}\n${bottom}\n\n`];
 }
 
 function renderInline(children, ctx) {
@@ -297,11 +365,21 @@ function renderTable(node, ctx) {
 	}
 
 	const renderRow = (row, isHeader = false) => {
-		const linesPerCol = row.map((cell, idx) =>
-			wrapText(cell, widths[idx], ctx.options.wrap).map((l) =>
-				padCell(l, widths[idx], aligns[idx]),
-			),
-		);
+		const pad = ctx.options.tablePadding;
+		const linesPerCol = row.map((cell, idx) => {
+			const padded = ` ${cell} `;
+			const target = widths[idx] - pad * 2;
+			const wrapped = wrapText(
+				ctx.options.tableTruncate
+					? truncateCell(cell, target, ctx.options.tableEllipsis)
+					: padded,
+				ctx.options.wrap ? target : Number.MAX_SAFE_INTEGER,
+				ctx.options.wrap,
+			);
+			return wrapped.map((l) =>
+				padCell(` ${l} `, widths[idx], aligns[idx], ctx.options.tablePadding),
+			);
+		});
 		// Row height = max wrapped lines in any column; pad shorter ones
 		const height = Math.max(...linesPerCol.map((c) => c.length));
 		const out = [];
@@ -312,7 +390,7 @@ function renderTable(node, ctx) {
 					? ctx.style(content, ctx.options.theme.tableHeader)
 					: ctx.style(content, ctx.options.theme.tableCell);
 			});
-			out.push(`| ${parts.join(" | ")} |\n`);
+			out.push(parts);
 		}
 		return out;
 	};
@@ -321,22 +399,59 @@ function renderTable(node, ctx) {
 		header.children.map((c) => renderInline(c.children, ctx)),
 		true,
 	);
-	const divider = `| ${widths.map((w) => "—".repeat(w)).join(" | ")} |\n`;
 	const bodyRows = rows.flatMap((r) =>
 		renderRow(r.children.map((c) => renderInline(c.children, ctx))),
 	);
 
-	return [...headerRows, divider, ...bodyRows, "\n"];
+	if (ctx.options.tableBorder === "none") {
+		const lines = [...headerRows, ...bodyRows]
+			.map((row) => row.join(" | "))
+			.join("\n");
+		return [`${lines}\n\n`];
+	}
+
+	const box = TABLE_BOX[ctx.options.tableBorder] || TABLE_BOX.unicode;
+	const hLine = (sepMid, sepLeft, sepRight) =>
+		`${sepLeft}${widths
+			.map((w) => box.hSep.repeat(w))
+			.join(sepMid)}${sepRight}\n`;
+
+	const top = hLine(box.tSep, box.topLeft, box.topRight);
+	const mid = hLine(box.mSep, box.mLeft, box.mRight);
+	const bottom = hLine(box.bSep, box.bottomLeft, box.bottomRight);
+
+	const renderFlat = (rowsArr) =>
+		rowsArr
+			.map((r) => `${box.vSep}${r.map((c) => c).join(box.vSep)}${box.vSep}\n`)
+			.join("");
+
+	const dense = ctx.options.tableDense;
+	const out = [
+		top,
+		renderFlat(headerRows),
+		dense ? "" : mid,
+		renderFlat(bodyRows),
+		bottom,
+		"\n",
+	];
+	return out;
 }
 
-function padCell(text, width, align = "left") {
-	const pad = width - stringWidth(stripAnsi(text));
-	if (pad <= 0) return text;
-	if (align === "right") return `${" ".repeat(pad)}${text}`;
+function truncateCell(text, width, ellipsis) {
+	if (stringWidth(text) <= width) return text;
+	if (width <= ellipsis.length) return ellipsis.slice(0, width);
+	return text.slice(0, width - ellipsis.length) + ellipsis;
+}
+
+function padCell(text, width, align = "left", _padSpaces = 0) {
+	const core = text;
+	const pad = width - stringWidth(stripAnsi(core));
+	if (pad <= 0) return core;
+	if (align === "right") return `${" ".repeat(pad)}${core}`;
 	if (align === "center") {
 		const left = Math.floor(pad / 2);
 		const right = pad - left;
-		return `${" ".repeat(left)}${text}${" ".repeat(right)}`;
+		return `${" ".repeat(left)}${core}${" ".repeat(right)}`;
 	}
-	return `${text}${" ".repeat(pad)}`;
+	return `${core}${" ".repeat(pad)}`;
 }
