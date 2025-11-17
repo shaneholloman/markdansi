@@ -22,7 +22,7 @@ Dev: `vitest`, TypeScript (NodeNext).
 `  width?: number;            // used only when wrap===true; default: TTY cols or 80`
 `  hyperlinks?: boolean;      // default: auto via supports-hyperlinks`
 `  color?: boolean;           // default: true if TTY; if false => no ANSI/OSC at all`
-`  theme?: ThemeName | Theme; // built-ins: default, dim, bright`
+`  theme?: ThemeName | Theme; // built-ins: default, dim, bright, solarized, monochrome, contrast`
 `  listIndent?: number;       // spaces per nesting level; default 2`
 `  quotePrefix?: string;      // blockquote line prefix; default "│ "`
 `  tableBorder?: "unicode" | "ascii" | "none"; // default unicode box drawing`
@@ -70,6 +70,9 @@ Each theme entry holds simple SGR intents (bold/italic/fg color names). `inlineC
 - `default`: bold headings, blue links, cyan inline code, green block code, yellow table headers, subtle quotes/hr.
 - `dim`: muted colors for low-contrast terminals.
 - `bright`: higher contrast variant.
+- `solarized`: yellow headings, cyan inline, teal block code, blue links, yellow headers.
+- `monochrome`: bold/italic cues only, dim code, underlined links.
+- `contrast`: magenta headings, cyan inline, green block code, yellow headers, bright markers.
 
 ## Testing (vitest)
 - Unit: inline formatting (emph/strong/code/strike), links/hyperlinks on/off, wrap/no-wrap behavior, table alignment and wrapping, task lists, strikethrough.

@@ -30,10 +30,53 @@ const bright: Theme = {
 	blockCode: { color: "green" },
 };
 
+const solarized: Theme = {
+	heading: { color: "yellow", bold: true },
+	strong: { bold: true },
+	emph: { italic: true },
+	inlineCode: { color: "cyan" },
+	blockCode: { color: "#2aa198" },
+	link: { color: "blue", underline: true },
+	quote: { color: "gray" },
+	hr: { color: "gray" },
+	listMarker: { color: "cyan" },
+	tableHeader: { color: "yellow", bold: true },
+};
+
+const monochrome: Theme = {
+	heading: { bold: true },
+	strong: { bold: true },
+	emph: { italic: true },
+	inlineCode: { dim: true },
+	blockCode: { dim: true },
+	link: { underline: true },
+	quote: { dim: true },
+	hr: { dim: true },
+	listMarker: { dim: true },
+	tableHeader: { bold: true },
+};
+
+const contrast: Theme = {
+	heading: { color: "magenta", bold: true },
+	strong: { color: "white", bold: true },
+	emph: { color: "white", italic: true },
+	inlineCode: { color: "cyan", bold: true },
+	blockCode: { color: "green", bold: true },
+	link: { color: "blue", underline: true },
+	quote: { color: "gray" },
+	hr: { color: "gray" },
+	listMarker: { color: "yellow", bold: true },
+	tableHeader: { color: "yellow", bold: true },
+	tableCell: { color: "white" },
+};
+
 export interface Themes {
 	default: Theme;
 	dim: Theme;
 	bright: Theme;
+	solarized: Theme;
+	monochrome: Theme;
+	contrast: Theme;
 	[key: string]: Theme;
 }
 
@@ -41,6 +84,9 @@ export const themes: Themes = {
 	default: Object.freeze(base),
 	dim: Object.freeze(dim),
 	bright: Object.freeze(bright),
+	solarized: Object.freeze(solarized),
+	monochrome: Object.freeze(monochrome),
+	contrast: Object.freeze(contrast),
 };
 
 export type Styler = (text: string, style?: StyleIntent) => string;

@@ -58,7 +58,7 @@ console.log(custom('`inline`\n\n```\nblock code\n```'));
 - `width`: used only when `wrap===true`; default TTY columns or 80.
 - `color` (default TTY): `false` removes all ANSI/OSC.
 - `hyperlinks` (default auto): enable/disable OSC‑8 links.
-- `theme`: `default | dim | bright` or custom theme object.
+- `theme`: `default | dim | bright | solarized | monochrome | contrast` or custom theme object.
 - `listIndent`: spaces per nesting level (default 2).
 - `quotePrefix`: blockquote line prefix (default `│ `).
 - `tableBorder`: `unicode` (default) | `ascii` | `none`.
