@@ -343,6 +343,31 @@ ${Array.from({ length: 12 }, (_, i) => `l${i + 1}`).join("\n")}
 		expect(firstLine.startsWith("┌")).toBe(true);
 		expect(firstLine).toContain("[bash]");
 	});
+
+	it("omits label when language is absent", () => {
+		const md = "```\nfoo\n```";
+		const out = render(md, { color: false, wrap: false });
+		const firstLine = out.split("\n")[0];
+		expect(firstLine.startsWith("┌")).toBe(true);
+		expect(firstLine).not.toContain("[");
+	});
+
+	it("keeps header width when label is long", () => {
+		const md = "```superlonglanguageid\nfoo\n```";
+		const out = render(md, { color: false, wrap: false });
+		const lines = out.split("\n");
+		const top = lines[0];
+		const body = lines[1];
+		// Header should be wider or equal to body content
+		expect(top.length).toBeGreaterThanOrEqual(body.length - 2 /* box padding */);
+		expect(top).toContain("[superlonglanguageid]");
+	});
+
+	it("does not emit blank line before boxed code", () => {
+		const md = "```bash\nfoo\n```";
+		const out = render(md, { color: false, wrap: false });
+		expect(out.startsWith("┌")).toBe(true);
+	});
 });
 
 describe("styling helpers", () => {
