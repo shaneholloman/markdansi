@@ -357,19 +357,20 @@ function renderCodeBlock(node: Code, ctx: RenderContext): string[] {
 		ctx.options.codeWrap && ctx.options.width
 			? Math.min(maxLine, Math.max(1, ctx.options.width - 4))
 			: maxLine;
+	const labelRaw = node.lang ? `[${node.lang}]` : "";
+	const labelStyled = labelRaw ? ctx.style(labelRaw, { dim: true }) : "";
 	const innerWidth = Math.max(
 		ctx.options.codeWrap ? wrapTarget : maxLine,
 		minInner,
+		labelRaw.length,
 	);
-	const topLang = node.lang
-		? `${ctx.style(`[${node.lang}]`, { dim: true })} `
-		: "";
-	const h = "─".repeat(Math.max(innerWidth, topLang.length));
-	const top = `┌ ${topLang}${h.slice(topLang.length)}┐`;
-	const bottom = `└${"─".repeat(h.length + 1)}┘`;
+	const top = `┌ ${labelStyled}${" ".repeat(
+		Math.max(0, innerWidth - labelRaw.length),
+	)}┐`;
+	const bottom = `└${"─".repeat(innerWidth + 2)}┘`;
 
 	const boxLines = contentLines.map((ln: string) => {
-		const pad = Math.max(0, h.length - visibleWidth(ln));
+		const pad = Math.max(0, innerWidth - visibleWidth(ln));
 		const left = ctx.style("│ ", { dim: true });
 		const right = ctx.style(" │", { dim: true });
 		return `${left}${ln}${" ".repeat(pad)}${right}`;

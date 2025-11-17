@@ -335,6 +335,14 @@ ${Array.from({ length: 12 }, (_, i) => `l${i + 1}`).join("\n")}
 		const out = render(md, { color: true, codeGutter: true, wrap: false });
 		expect(stripAnsi(out)).toContain("12 ");
 	});
+
+	it("renders language label in code box header", () => {
+		const md = "```bash\nfoo\n```";
+		const out = render(md, { color: false, wrap: false });
+		const firstLine = out.split("\n")[0];
+		expect(firstLine.startsWith("┌")).toBe(true);
+		expect(firstLine).toContain("[bash]");
+	});
 });
 
 describe("styling helpers", () => {
