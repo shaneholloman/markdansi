@@ -4,13 +4,13 @@ const base = {
 	heading: { color: "yellow", bold: true },
 	strong: { bold: true },
 	emph: { italic: true },
-	inlineCode: { color: "cyan", dim: true },
-	blockCode: { color: "cyan", dim: true },
+	inlineCode: { color: "cyan" },
+	blockCode: { color: "green" },
 	link: { color: "blue", underline: true },
 	quote: { dim: true },
 	hr: { dim: true },
 	listMarker: { color: "cyan" },
-	tableHeader: { bold: true },
+	tableHeader: { bold: true, color: "yellow" },
 	tableCell: {},
 };
 

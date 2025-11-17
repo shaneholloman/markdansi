@@ -63,7 +63,7 @@ export interface RenderOptions {
 	tablePadding?: number;
 	/** If true, reduces separator rows (default false). */
 	tableDense?: boolean;
-	/** If true, truncates cell content to fit column width. */
+	/** If true, truncates cell content to fit column width (default true). */
 	tableTruncate?: boolean;
 	/** Ellipsis text for truncation (default "…"). */
 	tableEllipsis?: string;
@@ -71,7 +71,7 @@ export interface RenderOptions {
 	codeBox?: boolean;
 	/** Show line-number gutter for code blocks (default false). */
 	codeGutter?: boolean;
-	/** Wrap code lines to width; otherwise overflow (default false). */
+	/** Wrap code lines to width; otherwise overflow (default true). */
 	codeWrap?: boolean;
 	highlighter?: Highlighter;
 }

@@ -5,8 +5,6 @@ Tiny, dependency-light Markdown → ANSI renderer and CLI for modern Node (>=22)
 
 ## Install
 
-> Not yet published to npm (name available as of November 16, 2025). Install from git or local path until released.
-
 ```bash
 pnpm add markdansi
 # or
@@ -63,20 +61,20 @@ console.log(custom('`inline`\n\n```\nblock code\n```'));
 - `quotePrefix`: blockquote line prefix (default `│ `).
 - `tableBorder`: `unicode` (default) | `ascii` | `none`.
 - `tablePadding`: spaces inside cells (default 1); `tableDense` drops extra separators.
-- `tableTruncate`: cap cells to column width (ellipsis default `…`).
-- `codeBox`: draw a box around fenced code (default true); `codeGutter` shows line numbers; `codeWrap` wraps code lines.
+- `tableTruncate`: cap cells to column width (default `true`, ellipsis `…`).
+- `codeBox`: draw a box around fenced code (default true); `codeGutter` shows line numbers; `codeWrap` wraps code lines by default.
 - `highlighter(code, lang)`: optional hook to recolor code blocks; must not add/remove newlines.
 
 ## Status
 
-Version: `0.1.0`  
+Version: `0.1.1`  
 Tests: `pnpm test`  
 License: MIT
 
 ## Notes
 
-- Code blocks never hard‑wrap; long lines may overflow. If `lang` is present, a faint `[lang]` label is shown.
-- Tables are ASCII boxed, align using GFM alignment, and wrap cell text on spaces; very long words may overflow.
+- Code blocks wrap to the render width by default; disable with `codeWrap=false`. If `lang` is present, a faint `[lang]` label is shown and boxes use unicode borders.
+- Tables use unicode borders by default, include padding, respect GFM alignment, and truncate long cells with `…` so layouts stay tidy. Turn off truncation with `tableTruncate=false`.
 - Tight vs loose lists follow GFM; task items render `[ ]` / `[x]`.
 
 See `docs/spec.md` for full behavior details.*** End Patch

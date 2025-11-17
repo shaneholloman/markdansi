@@ -1,4 +1,4 @@
-# Markdansi v0.1.0 – Design Spec
+# Markdansi v0.1.1 – Design Spec
 
 Goal: Tiny, dependency‑light Markdown → ANSI renderer & CLI for Node ≥22, using pnpm. Output is terminal ANSI only (no HTML). Focus on readable defaults, sensible wrapping, and minimal runtime deps.
 
@@ -28,11 +28,11 @@ Dev: `vitest`.
 `  tableBorder?: "unicode" | "ascii" | "none"; // default unicode box drawing`
 `  tablePadding?: number;     // spaces inside cells (L/R); default 1`
 `  tableDense?: boolean;      // reduce separator rows; default false`
-`  tableTruncate?: boolean;   // truncate cells to fit col widths; default false`
+`  tableTruncate?: boolean;   // truncate cells to fit col widths; default true`
 `  tableEllipsis?: string;    // truncation marker; default "…"`
 `  codeBox?: boolean;         // draw a box around fenced code; default true`
 `  codeGutter?: boolean;      // left gutter with line numbers; default false`
-`  codeWrap?: boolean;        // wrap code to width; default false (overflow)`
+`  codeWrap?: boolean;        // wrap code to width; default true`
 `  highlighter?: (code: string, lang?: string) => string; // hook, must not add newlines`
 `}``
 
@@ -51,9 +51,9 @@ Each theme entry holds simple SGR intents (bold/italic/fg color names). `inlineC
 ## Feature Scope (v1)
 - Blocks: paragraphs, headings (1–6), blockquotes, fenced/indented code blocks, HR, tables, unordered/ordered lists, task lists.
 - Inline: strong, emphasis, code spans, autolinks/links, strikethrough (GFM `~~`), backslash escapes.
-- Code blocks: monospace box (unicode or ascii; `codeBox=false` disables). Optional gutter with 1‑based line numbers when `codeGutter=true`. If `lang` present, show faint header label. Highlighter hook may recolor text but must not add/remove newlines. Code blocks overflow by default; set `codeWrap=true` to wrap inside the box.
+- Code blocks: monospace box (unicode or ascii; `codeBox=false` disables). Optional gutter with 1‑based line numbers when `codeGutter=true`. If `lang` present, show faint header label. Highlighter hook may recolor text but must not add/remove newlines. Code blocks wrap to the available width by default (hard-wrap long tokens); set `codeWrap=false` to allow overflow.
 - Tables: box-drawing (unicode default, ascii or none). Respect GFM alignment per column, pad cells by `tablePadding`, optional dense borders. Can truncate cell text (`tableTruncate=true`, `tableEllipsis` marker) to keep width. Width balancing shrinks columns while possible; if still too wide, cells overflow.
-- Wrapping: word-wrap on spaces; uses `string-width` on stripped text. Preserve hard breaks; words longer than width may overflow. Code blocks optionally wrap based on `codeWrap`; otherwise ignored.
+- Wrapping: word-wrap on spaces; uses `string-width` on stripped text. Preserve hard breaks; words longer than width may overflow. Code blocks wrap by default; turn off with `codeWrap=false`.
 - Hyperlinks: OSC‑8 when supported and allowed; fallback to underlined text plus URL in parentheses.
 - Error handling: never throw on malformed emphasis; leave literals untouched if unmatched.
 
@@ -67,7 +67,7 @@ Each theme entry holds simple SGR intents (bold/italic/fg color names). `inlineC
    - Track active SGR for wrapping splits to re-open styles on new lines.
 
 ## Themes (initial)
-- `default`: bold headings, blue links, cyan code, subtle quotes/hr.
+- `default`: bold headings, blue links, cyan inline code, green block code, yellow table headers, subtle quotes/hr.
 - `dim`: muted colors for low-contrast terminals.
 - `bright`: higher contrast variant.
 

@@ -34,11 +34,11 @@ function resolveOptions(userOptions = {}) {
 	const tableBorder = userOptions.tableBorder || "unicode";
 	const tablePadding = userOptions.tablePadding ?? 1;
 	const tableDense = userOptions.tableDense ?? false;
-	const tableTruncate = userOptions.tableTruncate ?? false;
+	const tableTruncate = userOptions.tableTruncate ?? true;
 	const tableEllipsis = userOptions.tableEllipsis ?? "…";
 	const codeBox = userOptions.codeBox ?? true;
 	const codeGutter = userOptions.codeGutter ?? false;
-	const codeWrap = userOptions.codeWrap ?? false;
+	const codeWrap = userOptions.codeWrap ?? true;
 	return {
 		wrap,
 		width: baseWidth,
@@ -241,12 +241,25 @@ function renderCodeBlock(node, ctx) {
 	const gutterWidth = ctx.options.codeGutter
 		? String(lines.length).length + 2
 		: 0;
-	const contentLines = lines.map((line, idx) => {
-		const highlighted =
-			ctx.options.highlighter?.(line, node.lang) ?? ctx.style(line, theme);
-		if (!ctx.options.codeGutter) return highlighted;
-		const num = String(idx + 1).padStart(gutterWidth - 2, " ");
-		return `${ctx.style(num, { dim: true })} ${highlighted}`;
+	const boxPadding = ctx.options.codeBox ? 4 : 0;
+	const wrapLimit =
+		ctx.options.codeWrap && ctx.options.wrap && ctx.options.width
+			? Math.max(1, ctx.options.width - boxPadding - gutterWidth)
+			: undefined; // undefined => no hard wrap limit
+	const contentLines = lines.flatMap((line, idx) => {
+		const segments =
+			wrapLimit !== undefined ? wrapCodeLine(line, wrapLimit) : [line];
+		return segments.map((segment, segIdx) => {
+			const highlighted =
+				ctx.options.highlighter?.(segment, node.lang) ??
+				ctx.style(segment, theme);
+			if (!ctx.options.codeGutter) return highlighted;
+			const num =
+				segIdx === 0
+					? String(idx + 1).padStart(gutterWidth - 2, " ")
+					: " ".repeat(gutterWidth - 1);
+			return `${ctx.style(num, { dim: true })} ${highlighted}`;
+		});
 	});
 
 	if (!ctx.options.codeBox) {
@@ -255,9 +268,15 @@ function renderCodeBlock(node, ctx) {
 
 	// Boxed block
 	const maxLine = Math.max(...contentLines.map((l) => visibleWidth(l)), 0);
-	const innerWidth = ctx.options.codeWrap
-		? Math.min(maxLine, ctx.options.width ?? maxLine)
-		: Math.max(maxLine, node.lang ? node.lang.length + 2 : 0);
+	const minInner = node.lang ? node.lang.length + 2 : 0;
+	const wrapTarget =
+		ctx.options.codeWrap && ctx.options.width
+			? Math.min(maxLine, Math.max(1, ctx.options.width - 4))
+			: maxLine;
+	const innerWidth = Math.max(
+		ctx.options.codeWrap ? wrapTarget : maxLine,
+		minInner,
+	);
 	const topLang = node.lang
 		? `${ctx.style(`[${node.lang}]`, { dim: true })} `
 		: "";
@@ -341,6 +360,10 @@ function renderTable(node, ctx) {
 	const colCount = Math.max(...cells.map((r) => r.length));
 	const widths = new Array(colCount).fill(1);
 	const aligns = node.align || [];
+	const pad = ctx.options.tablePadding;
+	const minContent = Math.max(1, ctx.options.tableEllipsis.length + 1);
+	// ensure we always have room for at least one visible char + ellipsis + padding
+	const minColWidth = Math.max(1, pad * 2 + minContent);
 
 	cells.forEach((row) => {
 		row.forEach((cell, idx) => {
@@ -358,21 +381,24 @@ function renderTable(node, ctx) {
 		let over = totalWidth - ctx.options.width;
 		while (over > 0) {
 			const i = widths.indexOf(Math.max(...widths));
-			if (widths[i] <= 1) break;
+			if (widths[i] <= minColWidth) break;
 			widths[i] -= 1;
 			over -= 1;
 		}
 	}
+	for (let i = 0; i < widths.length; i += 1) {
+		if (widths[i] < minColWidth) widths[i] = minColWidth;
+	}
 
 	const renderRow = (row, isHeader = false) => {
-		const pad = ctx.options.tablePadding;
 		const linesPerCol = row.map((cell, idx) => {
 			const padded = ` ${cell} `;
-			const target = widths[idx] - pad * 2;
+			const target = Math.max(minContent, widths[idx] - pad * 2);
+			const cellText = ctx.options.tableTruncate
+				? truncateCell(cell, target, ctx.options.tableEllipsis)
+				: padded;
 			const wrapped = wrapText(
-				ctx.options.tableTruncate
-					? truncateCell(cell, target, ctx.options.tableEllipsis)
-					: padded,
+				cellText,
 				ctx.options.wrap ? target : Number.MAX_SAFE_INTEGER,
 				ctx.options.wrap,
 			);
@@ -441,6 +467,24 @@ function truncateCell(text, width, ellipsis) {
 	if (stringWidth(text) <= width) return text;
 	if (width <= ellipsis.length) return ellipsis.slice(0, width);
 	return text.slice(0, width - ellipsis.length) + ellipsis;
+}
+
+function wrapCodeLine(text, width) {
+	// Hard-wrap code even without spaces while keeping ANSI-safe width accounting.
+	if (width <= 0) return [text];
+	const parts = [];
+	let current = "";
+	for (const ch of [...text]) {
+		const chWidth = stringWidth(ch);
+		if (visibleWidth(current) + chWidth > width) {
+			parts.push(current);
+			current = ch;
+			continue;
+		}
+		current += ch;
+	}
+	if (current !== "") parts.push(current);
+	return parts.length ? parts : [""];
 }
 
 function padCell(text, width, align = "left", _padSpaces = 0) {

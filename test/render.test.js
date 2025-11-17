@@ -128,7 +128,12 @@ describe("tables", () => {
 | --- | --- |
 | a b c d e f | g |
 `;
-		const out = strip(md, { ...noColor, width: 15, wrap: true });
+		const out = strip(md, {
+			...noColor,
+			width: 15,
+			wrap: true,
+			tableTruncate: false,
+		});
 		const lines = out
 			.trim()
 			.split("\n")
@@ -144,7 +149,12 @@ describe("tables", () => {
 | --- | --- |
 | ${word} | x |
 `;
-		const out = strip(md, { ...noColor, width: 10, wrap: true });
+		const out = strip(md, {
+			...noColor,
+			width: 10,
+			wrap: true,
+			tableTruncate: false,
+		});
 		expect(out).toContain(word);
 	});
 
@@ -154,12 +164,27 @@ describe("tables", () => {
 | :-- | --: |
 | left | right |
 `;
-		const out = strip(md, { ...noColor, width: 30, wrap: true });
+		const out = strip(md, {
+			...noColor,
+			width: 30,
+			wrap: true,
+			tableTruncate: false,
+		});
 		const lines = out
 			.trim()
 			.split("\n")
 			.filter((l) => l.includes("│") || l.includes("|"));
 		expect(lines.some((l) => /left/.test(l) && /right/.test(l))).toBe(true);
+	});
+
+	it("truncates cells by default when width is tight", () => {
+		const md = `
+| col | col2 |
+| --- | --- |
+| Supercalifragilistic | short |
+`;
+		const out = strip(md, { ...noColor, width: 18, wrap: true });
+		expect(out).toContain("…");
 	});
 });
 
@@ -210,6 +235,16 @@ describe("blockquotes", () => {
 	it("prefixes lines with quote leader", () => {
 		const out = strip("> quoted line", noColor);
 		expect(out.trim().startsWith("│ ")).toBe(true);
+	});
+});
+
+describe("code blocks", () => {
+	it("wraps code lines when codeWrap is enabled (default)", () => {
+		const md = "```\n0123456789ABCDEFG\n```";
+		const out = strip(md, { ...noColor, width: 12, codeBox: false });
+		const firstLine = out.split("\n")[0];
+		expect(firstLine.length).toBeLessThanOrEqual(12);
+		expect(out).toContain("0123456789");
 	});
 });
 

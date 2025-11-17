@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.1
+
+### Highlights
+- Prettier defaults: tables truncate to fit with `…`, code blocks wrap to width, and unicode table borders remain on by default.
+- Default theme brightened (cyan inline code, green block code, yellow table headers).
+- Code block wrapping now respects width when enabled and keeps gutters aligned.
+- Docs/spec/README updated; version bump to 0.1.1.
+
+## 0.1.0
 
 ### Highlights
 - Markdown → ANSI renderer with GFM support (tables, task lists, strikethrough).
@@ -16,4 +24,3 @@
 - Code blocks never hard-wrap; long lines may overflow; `[lang]` label shown when provided.
 - `strip()` renders with colors/links disabled but honors wrap/width/layout options.
 - Package files include src, dist/index.d.ts, README, LICENSE, docs/spec.
-
