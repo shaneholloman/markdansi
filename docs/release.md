@@ -10,7 +10,7 @@ Lightweight npm/CLI library; no binaries to sign. Borrowed the changelog discipl
 - Update `package.json` version (no gaps; strictly increment).
 - Update `CHANGELOG.md`:
   - Single top-level title, versions in descending order, no duplicates or skipped numbers.
-  - User-facing bullets only (features/fixes/behavior changes); avoid internal-only script bumps.
+  - User-facing bullets only (features/fixes/behavior changes); avoid internal-only items like test additions or linting tweaks.
   - Keep bullets concise, one `-` per line; blank line between version sections.
 - Make sure README/spec match the new version or new flags.
 
