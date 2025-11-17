@@ -28,9 +28,11 @@ export function parseArgs(argv: string[]): CliArgs {
 		else if (a === "--code-box=true") args.codeBox = true;
 		else if (a === "--code-gutter=true") args.codeGutter = true;
 		else if (a === "--code-gutter=false") args.codeGutter = false;
-		else if (a.startsWith("--table-border="))
-			args.tableBorder = a.split("=")[1] as RenderOptions["tableBorder"];
-		else if (a === "--table-dense") args.tableDense = true;
+		else if (a.startsWith("--table-border=")) {
+			const val = a.split("=")[1];
+			if (val === "unicode" || val === "ascii" || val === "none")
+				args.tableBorder = val;
+		} else if (a === "--table-dense") args.tableDense = true;
 		else if (a === "--table-truncate=false") args.tableTruncate = false;
 		else if (a === "--table-truncate=true") args.tableTruncate = true;
 		else if (a === "--table-padding") {

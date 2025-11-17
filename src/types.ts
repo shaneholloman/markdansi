@@ -7,6 +7,7 @@ export type ColorName =
 	| "magenta"
 	| "cyan"
 	| "white"
+	| "gray"
 	| `#${string}`
 	| `${number}`;
 
