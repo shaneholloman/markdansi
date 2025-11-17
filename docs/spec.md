@@ -1,4 +1,4 @@
-# Markdansi v0.1.2 – Design Spec
+# Markdansi v0.1.1 – Design Spec
 
 Goal: Tiny, dependency‑light Markdown → ANSI renderer & CLI for Node ≥22, using pnpm. Output is terminal ANSI only (no HTML). Focus on readable defaults, sensible wrapping, and minimal runtime deps.
 

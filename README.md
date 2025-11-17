@@ -69,7 +69,7 @@ console.log(custom('`inline`\n\n```\nblock code\n```'));
 
 ## Status
 
-Version: `0.1.2` (unreleased)  
+Version: `0.1.1` (released)  
 Tests: `pnpm test`  
 License: MIT
 

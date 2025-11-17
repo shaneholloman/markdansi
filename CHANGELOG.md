@@ -1,20 +1,15 @@
 # Changelog
 
-## 0.1.2 (unreleased)
-
-### Highlights
-- Migrated codebase to TypeScript (NodeNext ESM), compiled output now in `dist/`.
-- Package entrypoints/bins point to compiled JS; `prepare` runs full compile.
-- Types now come from source; removed separate `types/` shim.
-- Added tests for table borders/padding/dense/truncate, code gutters/wrap box toggles, theme colors, and CLI flags.
-
-## 0.1.1 (about to release)
+## 0.1.1 (2025-11-17)
 
 ### Highlights
 - Prettier defaults: tables truncate to fit with `…`, code blocks wrap to width, and unicode table borders remain on by default.
 - Default theme brightened (cyan inline code, green block code, yellow table headers).
 - Code block wrapping now respects width when enabled and keeps gutters aligned.
-- Docs/spec/README updated; version bump to 0.1.1; published as `markdansi@0.1.1` on npm.
+- Added built-in themes `solarized`, `monochrome`, `contrast`; theme export remains frozen map.
+- Migrated source/tests to TypeScript; package is ESM (NodeNext). `prepare` runs full compile to `dist/`.
+- Added CLI flags for table/code options; expanded tests for tables/code/gutter/theme defaults.
+- Docs/spec/README updated; publish as `markdansi@0.1.1` on npm.
 
 ## 0.1.0 (2025-11-16)
 
