@@ -44,6 +44,17 @@ type RenderContext = {
 	style: Styler;
 };
 
+function dedent(markdown: string): string {
+	const lines = markdown.split("\n");
+	const indents = lines
+		.filter((l) => l.trim() !== "")
+		.map((l) => l.match(/^[ \t]*/)?.[0].length ?? 0);
+	if (indents.length === 0) return markdown;
+	const minIndent = Math.min(...indents);
+	if (minIndent === 0) return markdown;
+	return lines.map((l) => l.slice(Math.min(minIndent, l.length))).join("\n");
+}
+
 function resolveOptions(userOptions: RenderOptions = {}): ResolvedOptions {
 	const wrap = userOptions.wrap !== undefined ? userOptions.wrap : true;
 	const baseWidth =
@@ -149,7 +160,7 @@ export function render(
 ): string {
 	const options = resolveOptions(userOptions);
 	const style = createStyler({ color: options.color });
-	const tree = parse(markdown);
+	const tree = parse(dedent(markdown));
 	const ctx: RenderContext = { options, style };
 	const body = renderChildren(tree.children, ctx, 0, true).join("");
 	return options.color ? body : stripAnsi(body);
