@@ -22,7 +22,7 @@
 		"types": "tsc -p tsconfig.json --emitDeclarationOnly",
 		"compile": "tsc -p tsconfig.json",
 		"prepare": "pnpm compile",
-		"markdansi": "node dist/cli.js"
+		"markdansi": "tsx src/cli.ts"
 	},
 	"keywords": [
 		"markdown",
