@@ -1,26 +1,27 @@
 {
 	"name": "markdansi",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Tiny dependency-light markdown to ANSI converter.",
 	"type": "module",
-	"main": "src/index.js",
+	"main": "dist/index.js",
 	"exports": {
 		".": {
-			"import": "./src/index.js"
+			"import": "./dist/index.js"
 		},
-		"./cli": "./src/cli.js"
+		"./cli": "./dist/cli.js"
 	},
 	"bin": {
-		"markdansi": "./src/cli.js"
+		"markdansi": "./dist/cli.js"
 	},
 	"scripts": {
-		"build": "pnpm lint && pnpm test",
+		"build": "pnpm lint && pnpm test && pnpm compile",
 		"clean": "rm -rf dist",
 		"lint": "rm -rf dist coverage && biome check .",
 		"test": "vitest run",
 		"test:coverage": "vitest run --coverage",
-		"types": "tsc -p tsconfig.json",
-		"prepare": "pnpm types"
+		"types": "tsc -p tsconfig.json --emitDeclarationOnly",
+		"compile": "tsc -p tsconfig.json",
+		"prepare": "pnpm compile"
 	},
 	"keywords": [
 		"markdown",
@@ -43,14 +44,12 @@
 	"license": "MIT",
 	"sideEffects": false,
 	"files": [
-		"src",
 		"dist",
 		"README.md",
 		"docs/spec.md",
 		"package.json",
 		"tsconfig.json",
-		".biome.json",
-		"types"
+		".biome.json"
 	],
 	"types": "dist/index.d.ts",
 	"dependencies": {
@@ -66,6 +65,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.5",
+		"@types/mdast": "^4.0.4",
 		"@types/node": "^24.10.1",
 		"@vitest/coverage-v8": "^4.0.9",
 		"typescript": "^5.9.3",

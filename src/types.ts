@@ -1,7 +1,3 @@
-// Public API typings for Markdansi.
-// Hand-authored source for `pnpm types` (tsc --emitDeclarationOnly)
-// to produce dist/index.d.ts. Keep in sync with src/ changes.
-
 export type ColorName =
 	| "black"
 	| "red"
@@ -75,16 +71,3 @@ export interface RenderOptions {
 	codeWrap?: boolean;
 	highlighter?: Highlighter;
 }
-
-export declare function render(
-	markdown: string,
-	options?: RenderOptions,
-): string;
-export declare function createRenderer(
-	options?: RenderOptions,
-): (markdown: string) => string;
-export declare function strip(
-	markdown: string,
-	options?: RenderOptions,
-): string;
-export declare const themes: Record<ThemeName | string, Theme>;

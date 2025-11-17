@@ -1,4 +1,4 @@
-# Markdansi v0.1.1 – Design Spec
+# Markdansi v0.1.2 – Design Spec
 
 Goal: Tiny, dependency‑light Markdown → ANSI renderer & CLI for Node ≥22, using pnpm. Output is terminal ANSI only (no HTML). Focus on readable defaults, sensible wrapping, and minimal runtime deps.
 
@@ -9,7 +9,7 @@ Goal: Tiny, dependency‑light Markdown → ANSI renderer & CLI for Node ≥22, 
 - `strip-ansi`: strip codes for width/wrapping.
 - `supports-hyperlinks`: detect OSC‑8 hyperlink support.
 
-Dev: `vitest`.
+Dev: `vitest`, TypeScript (NodeNext).
 
 ## Surface Area
 ### Library (ESM default, CJS export provided)

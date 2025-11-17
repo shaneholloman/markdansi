@@ -1,9 +1,9 @@
 import supportsHyperlinks from "supports-hyperlinks";
 import { describe, expect, it } from "vitest";
-import { hyperlinkSupported } from "../src/hyperlink.js";
-import { render, strip } from "../src/index.js";
-import { createStyler, themes } from "../src/theme.js";
-import { wrapText } from "../src/wrap.js";
+import { hyperlinkSupported } from "../src/hyperlink.ts";
+import { render, strip } from "../src/index.ts";
+import { createStyler, themes } from "../src/theme.ts";
+import { wrapText } from "../src/wrap.ts";
 
 const noColor = { color: false, hyperlinks: false, wrap: true, width: 40 };
 

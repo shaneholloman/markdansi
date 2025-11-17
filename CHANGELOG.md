@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2 (unreleased)
+
+### Highlights
+- Migrated codebase to TypeScript (NodeNext ESM), compiled output now in `dist/`.
+- Package entrypoints/bins point to compiled JS; `prepare` runs full compile.
+- Types now come from source; removed separate `types/` shim.
+
 ## 0.1.1 (2025-11-17)
 
 ### Highlights

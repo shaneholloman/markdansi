@@ -1,7 +1,7 @@
 import stringWidth from "string-width";
 import stripAnsi from "strip-ansi";
 
-export function visibleWidth(text) {
+export function visibleWidth(text: string): number {
 	return stringWidth(stripAnsi(text));
 }
 
@@ -9,10 +9,10 @@ export function visibleWidth(text) {
  * Wrap a single paragraph string into lines respecting visible width.
  * Breaks only on spaces. Words longer than width overflow.
  */
-export function wrapText(text, width, wrap) {
+export function wrapText(text: string, width: number, wrap: boolean): string[] {
 	if (!wrap || width <= 0) return [text];
 	const words = text.split(/(\s+)/).filter((w) => w.length > 0);
-	const lines = [];
+	const lines: string[] = [];
 	let current = "";
 	let currentWidth = 0;
 
@@ -33,9 +33,14 @@ export function wrapText(text, width, wrap) {
 	return lines;
 }
 
-export function wrapWithPrefix(text, width, wrap, prefix = "") {
+export function wrapWithPrefix(
+	text: string,
+	width: number,
+	wrap: boolean,
+	prefix = "",
+): string[] {
 	if (!wrap) return text.split("\n").map((line) => prefix + line);
-	const out = [];
+	const out: string[] = [];
 	const w = Math.max(1, width - visibleWidth(prefix));
 	for (const line of text.split("\n")) {
 		const parts = wrapText(line, w, wrap);

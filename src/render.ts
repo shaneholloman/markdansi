@@ -1,11 +1,50 @@
+import type {
+	Blockquote,
+	Code,
+	Heading,
+	Link,
+	List,
+	ListItem,
+	Paragraph,
+	Root,
+	Table,
+} from "mdast";
 import stringWidth from "string-width";
 import stripAnsi from "strip-ansi";
 import { hyperlinkSupported, osc8 } from "./hyperlink.js";
 import { parse } from "./parser.js";
+import type { Styler } from "./theme.js";
 import { createStyler, themes } from "./theme.js";
+import type { RenderOptions, StyleIntent, Theme } from "./types.js";
 import { visibleWidth, wrapText, wrapWithPrefix } from "./wrap.js";
 
-function resolveOptions(userOptions = {}) {
+type BorderStyle = "unicode" | "ascii" | "none";
+
+type ResolvedOptions = {
+	wrap: boolean;
+	width?: number | undefined;
+	color: boolean;
+	hyperlinks: boolean;
+	theme: Theme & { inlineCode?: StyleIntent; blockCode?: StyleIntent };
+	highlighter?: RenderOptions["highlighter"];
+	listIndent: number;
+	quotePrefix: string;
+	tableBorder: BorderStyle;
+	tablePadding: number;
+	tableDense: boolean;
+	tableTruncate: boolean;
+	tableEllipsis: string;
+	codeBox: boolean;
+	codeGutter: boolean;
+	codeWrap: boolean;
+};
+
+type RenderContext = {
+	options: ResolvedOptions;
+	style: Styler;
+};
+
+function resolveOptions(userOptions: RenderOptions = {}): ResolvedOptions {
 	const wrap = userOptions.wrap !== undefined ? userOptions.wrap : true;
 	const baseWidth =
 		userOptions.width ?? (wrap ? process.stdout.columns || 80 : undefined);
@@ -17,16 +56,26 @@ function resolveOptions(userOptions = {}) {
 			? userOptions.hyperlinks
 			: color && hyperlinkSupported();
 	const effectiveHyperlinks = color ? hyperlinks : false;
-	const theme =
+	const baseTheme = themes.default ?? {};
+	const userTheme =
 		userOptions.theme && typeof userOptions.theme === "object"
 			? userOptions.theme
-			: themes[userOptions.theme || "default"] || themes.default;
-	const mergedTheme = {
-		...themes.default,
-		...(theme || {}),
-		// optional fallback: if only `code` provided, reuse for inline/block
-		inlineCode: theme?.inlineCode || theme?.code || themes.default.inlineCode,
-		blockCode: theme?.blockCode || theme?.code || themes.default.blockCode,
+			: themes[userOptions.theme || "default"] || baseTheme;
+	const mergedTheme: ResolvedOptions["theme"] = {
+		...baseTheme,
+		...(userTheme || {}),
+		inlineCode:
+			userTheme?.inlineCode ||
+			userTheme?.code ||
+			baseTheme.inlineCode ||
+			baseTheme.code ||
+			{},
+		blockCode:
+			userTheme?.blockCode ||
+			userTheme?.code ||
+			baseTheme.blockCode ||
+			baseTheme.code ||
+			{},
 	};
 	const highlighter = userOptions.highlighter;
 	const listIndent = userOptions.listIndent ?? 2;
@@ -39,9 +88,8 @@ function resolveOptions(userOptions = {}) {
 	const codeBox = userOptions.codeBox ?? true;
 	const codeGutter = userOptions.codeGutter ?? false;
 	const codeWrap = userOptions.codeWrap ?? true;
-	return {
+	const resolved: ResolvedOptions = {
 		wrap,
-		width: baseWidth,
 		color,
 		hyperlinks: effectiveHyperlinks,
 		theme: mergedTheme,
@@ -57,6 +105,8 @@ function resolveOptions(userOptions = {}) {
 		codeGutter,
 		codeWrap,
 	};
+	if (baseWidth !== undefined) resolved.width = baseWidth;
+	return resolved;
 }
 
 const HR_WIDTH = 40;
@@ -90,28 +140,41 @@ const TABLE_BOX = {
 	},
 };
 
-export function render(markdown, userOptions = {}) {
+export function render(
+	markdown: string,
+	userOptions: RenderOptions = {},
+): string {
 	const options = resolveOptions(userOptions);
 	const style = createStyler({ color: options.color });
 	const tree = parse(markdown);
-	const ctx = { options, style };
+	const ctx: RenderContext = { options, style };
 	const body = renderChildren(tree.children, ctx, 0, true).join("");
 	return options.color ? body : stripAnsi(body);
 }
 
-export function createRenderer(options) {
-	return (md) => render(md, options);
+export function createRenderer(options?: RenderOptions) {
+	return (md: string) => render(md, options);
 }
 
-function renderChildren(children, ctx, indentLevel = 0, isTightList = false) {
-	const out = [];
+function renderChildren(
+	children: Root["children"],
+	ctx: RenderContext,
+	indentLevel = 0,
+	isTightList = false,
+): string[] {
+	const out: string[][] = [];
 	for (const node of children) {
 		out.push(renderNode(node, ctx, indentLevel, isTightList));
 	}
 	return out.flat();
 }
 
-function renderNode(node, ctx, indentLevel, isTightList) {
+function renderNode(
+	node: Root["children"][number],
+	ctx: RenderContext,
+	indentLevel: number,
+	isTightList: boolean,
+): string[] {
 	switch (node.type) {
 		case "paragraph":
 			return renderParagraph(node, ctx, indentLevel);
@@ -134,7 +197,11 @@ function renderNode(node, ctx, indentLevel, isTightList) {
 	}
 }
 
-function renderParagraph(node, ctx, indentLevel) {
+function renderParagraph(
+	node: Paragraph,
+	ctx: RenderContext,
+	indentLevel: number,
+): string[] {
 	const text = renderInline(node.children, ctx);
 	const prefix = " ".repeat(ctx.options.listIndent * indentLevel);
 	const lines = wrapWithPrefix(
@@ -146,13 +213,13 @@ function renderParagraph(node, ctx, indentLevel) {
 	return lines.map((l) => `${l}\n`);
 }
 
-function renderHeading(node, ctx) {
+function renderHeading(node: Heading, ctx: RenderContext): string[] {
 	const text = renderInline(node.children, ctx);
 	const styled = ctx.style(text, ctx.options.theme.heading);
 	return [`\n${styled}\n`];
 }
 
-function renderHr(ctx) {
+function renderHr(ctx: RenderContext): string[] {
 	const width = ctx.options.wrap
 		? Math.min(ctx.options.width ?? HR_WIDTH, HR_WIDTH)
 		: HR_WIDTH;
@@ -160,7 +227,11 @@ function renderHr(ctx) {
 	return [`${ctx.style(line, ctx.options.theme.hr)}\n`];
 }
 
-function renderBlockquote(node, ctx, indentLevel) {
+function renderBlockquote(
+	node: Blockquote,
+	ctx: RenderContext,
+	indentLevel: number,
+): string[] {
 	// Render blockquote children as text, then wrap with the quote prefix so
 	// wrapping accounts for prefix width.
 	const inner = renderChildren(node.children, ctx, indentLevel);
@@ -175,15 +246,19 @@ function renderBlockquote(node, ctx, indentLevel) {
 	return wrapped.map((l) => `${l}\n`);
 }
 
-function renderList(node, ctx, indentLevel) {
+function renderList(
+	node: List,
+	ctx: RenderContext,
+	indentLevel: number,
+): string[] {
 	const tight = node.spread === false;
-	const items = node.children.flatMap((item, idx) =>
+	const items = node.children.flatMap((item: ListItem, idx: number) =>
 		renderListItem(
 			item,
 			ctx,
 			indentLevel,
 			tight,
-			node.ordered,
+			Boolean(node.ordered),
 			node.start ?? 1,
 			idx,
 		),
@@ -192,14 +267,14 @@ function renderList(node, ctx, indentLevel) {
 }
 
 function renderListItem(
-	node,
-	ctx,
-	indentLevel,
-	tight,
+	node: ListItem,
+	ctx: RenderContext,
+	indentLevel: number,
+	tight: boolean,
 	ordered = false,
 	start = 1,
 	idx = 0,
-) {
+): string[] {
 	const marker = ordered ? `${start + idx}.` : "-";
 	const markerStyled = ctx.style(marker, ctx.options.theme.listMarker);
 	const content = renderChildren(node.children, ctx, indentLevel + 1, tight)
@@ -208,20 +283,20 @@ function renderListItem(
 		.split("\n");
 
 	// Drop leading blank lines so bullets prefix real content (e.g., headings in lists)
-	while (content.length && content[0].trim() === "") {
+	while (content.length && (content[0]?.trim() ?? "") === "") {
 		content.shift();
 	}
 
 	const isTask = typeof node.checked === "boolean";
-	const box = isTask ? (node.checked ? "[x]" : "[ ]") : null;
+	const box = isTask && node.checked ? "[x]" : "[ ]";
 	const firstBullet =
 		" ".repeat(ctx.options.listIndent * indentLevel) +
 		(isTask
 			? `${ctx.style(box, ctx.options.theme.listMarker)} `
 			: `${markerStyled} `);
 
-	const lines = [];
-	content.forEach((line, i) => {
+	const lines: string[] = [];
+	content.forEach((line: string, i: number) => {
 		const clean = line.replace(/^\s+/, "");
 		const prefix =
 			i === 0
@@ -235,7 +310,7 @@ function renderListItem(
 	return lines.map((l) => `${l}\n`);
 }
 
-function renderCodeBlock(node, ctx) {
+function renderCodeBlock(node: Code, ctx: RenderContext): string[] {
 	const theme = ctx.options.theme.blockCode || ctx.options.theme.inlineCode;
 	const lines = (node.value ?? "").split("\n");
 	const gutterWidth = ctx.options.codeGutter
@@ -246,12 +321,12 @@ function renderCodeBlock(node, ctx) {
 		ctx.options.codeWrap && ctx.options.wrap && ctx.options.width
 			? Math.max(1, ctx.options.width - boxPadding - gutterWidth)
 			: undefined; // undefined => no hard wrap limit
-	const contentLines = lines.flatMap((line, idx) => {
+	const contentLines = lines.flatMap((line: string, idx: number) => {
 		const segments =
 			wrapLimit !== undefined ? wrapCodeLine(line, wrapLimit) : [line];
-		return segments.map((segment, segIdx) => {
+		return segments.map((segment: string, segIdx: number) => {
 			const highlighted =
-				ctx.options.highlighter?.(segment, node.lang) ??
+				ctx.options.highlighter?.(segment, node.lang ?? undefined) ??
 				ctx.style(segment, theme);
 			if (!ctx.options.codeGutter) return highlighted;
 			const num =
@@ -267,7 +342,10 @@ function renderCodeBlock(node, ctx) {
 	}
 
 	// Boxed block
-	const maxLine = Math.max(...contentLines.map((l) => visibleWidth(l)), 0);
+	const maxLine = Math.max(
+		...contentLines.map((l: string) => visibleWidth(l)),
+		0,
+	);
 	const minInner = node.lang ? node.lang.length + 2 : 0;
 	const wrapTarget =
 		ctx.options.codeWrap && ctx.options.width
@@ -284,7 +362,7 @@ function renderCodeBlock(node, ctx) {
 	const top = `┌ ${topLang}${h.slice(topLang.length)}┐`;
 	const bottom = `└${"─".repeat(h.length + 1)}┘`;
 
-	const boxLines = contentLines.map((ln) => {
+	const boxLines = contentLines.map((ln: string) => {
 		const pad = Math.max(0, h.length - visibleWidth(ln));
 		const left = ctx.style("│ ", { dim: true });
 		const right = ctx.style(" │", { dim: true });
@@ -294,7 +372,10 @@ function renderCodeBlock(node, ctx) {
 	return [`${top}\n${boxLines.join("\n")}\n${bottom}\n\n`];
 }
 
-function renderInline(children, ctx) {
+function renderInline(
+	children: Paragraph["children"],
+	ctx: RenderContext,
+): string {
 	let out = "";
 	for (const node of children) {
 		switch (node.type) {
@@ -330,13 +411,14 @@ function renderInline(children, ctx) {
 				out += "\n";
 				break;
 			default:
-				if (node.value) out += node.value;
+				if ("value" in node && typeof node.value === "string")
+					out += node.value;
 		}
 	}
 	return out;
 }
 
-function renderLink(node, ctx) {
+function renderLink(node: Link, ctx: RenderContext): string {
 	const label = renderInline(node.children, ctx) || node.url;
 	const url = node.url || "";
 	if (ctx.options.hyperlinks && url) {
@@ -351,8 +433,9 @@ function renderLink(node, ctx) {
 	return ctx.style(label, ctx.options.theme.link);
 }
 
-function renderTable(node, ctx) {
+function renderTable(node: Table, ctx: RenderContext): string[] {
 	const header = node.children[0];
+	if (!header) return [];
 	const rows = node.children.slice(1);
 	const cells = [header, ...rows].map((row) =>
 		row.children.map((cell) => renderInline(cell.children, ctx)),
@@ -365,8 +448,8 @@ function renderTable(node, ctx) {
 	// ensure we always have room for at least one visible char + ellipsis + padding
 	const minColWidth = Math.max(1, pad * 2 + minContent);
 
-	cells.forEach((row) => {
-		row.forEach((cell, idx) => {
+	cells.forEach((row: string[]) => {
+		row.forEach((cell: string, idx: number) => {
 			// Cap each column to MAX_COL but keep at least 1
 			widths[idx] = Math.max(
 				widths[idx],
@@ -390,8 +473,8 @@ function renderTable(node, ctx) {
 		if (widths[i] < minColWidth) widths[i] = minColWidth;
 	}
 
-	const renderRow = (row, isHeader = false) => {
-		const linesPerCol = row.map((cell, idx) => {
+	const renderRow = (row: string[], isHeader = false) => {
+		const linesPerCol: string[][] = row.map((cell: string, idx: number) => {
 			const padded = ` ${cell} `;
 			const target = Math.max(minContent, widths[idx] - pad * 2);
 			const cellText = ctx.options.tableTruncate
@@ -403,15 +486,21 @@ function renderTable(node, ctx) {
 				ctx.options.wrap,
 			);
 			return wrapped.map((l) =>
-				padCell(` ${l} `, widths[idx], aligns[idx], ctx.options.tablePadding),
+				padCell(
+					` ${l} `,
+					widths[idx],
+					aligns[idx] ?? "left",
+					ctx.options.tablePadding,
+				),
 			);
 		});
 		// Row height = max wrapped lines in any column; pad shorter ones
 		const height = Math.max(...linesPerCol.map((c) => c.length));
-		const out = [];
+		const out: string[][] = [];
 		for (let i = 0; i < height; i += 1) {
-			const parts = linesPerCol.map((col, idx) => {
-				const content = col[i] ?? padCell("", widths[idx], aligns[idx]);
+			const parts = linesPerCol.map((col: string[], idx: number) => {
+				const content =
+					col[i] ?? padCell("", widths[idx], aligns[idx] ?? "left");
 				return isHeader
 					? ctx.style(content, ctx.options.theme.tableHeader)
 					: ctx.style(content, ctx.options.theme.tableCell);
@@ -437,7 +526,7 @@ function renderTable(node, ctx) {
 	}
 
 	const box = TABLE_BOX[ctx.options.tableBorder] || TABLE_BOX.unicode;
-	const hLine = (sepMid, sepLeft, sepRight) =>
+	const hLine = (sepMid: string, sepLeft: string, sepRight: string) =>
 		`${sepLeft}${widths
 			.map((w) => box.hSep.repeat(w))
 			.join(sepMid)}${sepRight}\n`;
@@ -446,7 +535,7 @@ function renderTable(node, ctx) {
 	const mid = hLine(box.mSep, box.mLeft, box.mRight);
 	const bottom = hLine(box.bSep, box.bottomLeft, box.bottomRight);
 
-	const renderFlat = (rowsArr) =>
+	const renderFlat = (rowsArr: string[][]) =>
 		rowsArr
 			.map((r) => `${box.vSep}${r.map((c) => c).join(box.vSep)}${box.vSep}\n`)
 			.join("");
@@ -463,16 +552,16 @@ function renderTable(node, ctx) {
 	return out;
 }
 
-function truncateCell(text, width, ellipsis) {
+function truncateCell(text: string, width: number, ellipsis: string): string {
 	if (stringWidth(text) <= width) return text;
 	if (width <= ellipsis.length) return ellipsis.slice(0, width);
 	return text.slice(0, width - ellipsis.length) + ellipsis;
 }
 
-function wrapCodeLine(text, width) {
+function wrapCodeLine(text: string, width: number): string[] {
 	// Hard-wrap code even without spaces while keeping ANSI-safe width accounting.
 	if (width <= 0) return [text];
-	const parts = [];
+	const parts: string[] = [];
 	let current = "";
 	for (const ch of [...text]) {
 		const chWidth = stringWidth(ch);
@@ -487,7 +576,12 @@ function wrapCodeLine(text, width) {
 	return parts.length ? parts : [""];
 }
 
-function padCell(text, width, align = "left", _padSpaces = 0) {
+function padCell(
+	text: string,
+	width: number,
+	align: "left" | "right" | "center" | null | undefined = "left",
+	_padSpaces = 0,
+): string {
 	const core = text;
 	const pad = width - stringWidth(stripAnsi(core));
 	if (pad <= 0) return core;

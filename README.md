@@ -1,7 +1,7 @@
 # 🎨 Markdansi: Wraps, colors, links - no baggage.
 ![npm](https://img.shields.io/npm/v/markdansi) ![license MIT](https://img.shields.io/badge/license-MIT-blue.svg) ![node >=22](https://img.shields.io/badge/node-%3E%3D22-brightgreen) ![tests vitest](https://img.shields.io/badge/tests-vitest-blue?logo=vitest)
 
-Tiny, dependency-light Markdown → ANSI renderer and CLI for modern Node (>=22). Focuses on readable terminal output with sensible wrapping, GFM support (tables, task lists, strikethrough), optional OSC‑8 hyperlinks, and zero built‑in syntax highlighting (pluggable hook).
+Tiny, dependency-light Markdown → ANSI renderer and CLI for modern Node (>=22). Focuses on readable terminal output with sensible wrapping, GFM support (tables, task lists, strikethrough), optional OSC‑8 hyperlinks, and zero built‑in syntax highlighting (pluggable hook). Written in TypeScript, ships ESM.
 
 Published on npm as `markdansi`.
 
@@ -69,7 +69,7 @@ console.log(custom('`inline`\n\n```\nblock code\n```'));
 
 ## Status
 
-Version: `0.1.1`  
+Version: `0.1.2`  
 Tests: `pnpm test`  
 License: MIT
 
