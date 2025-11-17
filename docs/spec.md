@@ -26,8 +26,8 @@ Dev: `vitest`.
 `  highlighter?: (code: string, lang?: string) => string; // hook, must not add newlines`
 `}``
 
-`type Theme = { heading, strong, emph, code, link, quote, hr, listMarker, tableHeader, tableCell }`
-Each theme entry holds simple SGR intents (bold/italic/fg color names).
+`type Theme = { heading, strong, emph, inlineCode, blockCode, code?, link, quote, hr, listMarker, tableHeader, tableCell }`
+Each theme entry holds simple SGR intents (bold/italic/fg color names). `inlineCode` / `blockCode` are used if present; otherwise `code` acts as a fallback for both.
 
 `strip(markdown: string): string` — convenience: render with `color=false`, `hyperlinks=false`.
 
@@ -79,4 +79,5 @@ Each theme entry holds simple SGR intents (bold/italic/fg color names).
 - Highlighter hook: receives raw code and optional lang; may return ANSI-colored text but must not add or remove newlines. Markdansi owns indentation/padding; code blocks never hard-wrap.
 - Tables width algorithm: compute desired column widths from content (cap at e.g. 40). While total exceeds width, decrement widest columns until it fits; if even minimums won’t fit, allow overflow. Respect GFM alignment per column. Cells with newlines keep those breaks.
 - Lists: honor GFM tight vs loose lists (tight => no blank line between items; loose => blank line). Nesting indent = 2 spaces per level; bullets use `-`; ordered lists use input numbering.
-- Blockquotes: prefix each wrapped line with `│ `; quote content wraps with same padding as paragraphs.
+- Blockquotes: prefix each wrapped line with `│ ` (configurable via `quotePrefix`); quote content wraps accounting for the prefix width.
+- List indent is configurable via `listIndent` (default 2 spaces per level).
