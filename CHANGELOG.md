@@ -14,8 +14,8 @@
 
 ## 0.1.2 (unreleased)
 
-### Planned
-- TBD
+### Planned / in progress
+- (open for next cycle)
 
 ## 0.1.0 (2025-11-16)
 
