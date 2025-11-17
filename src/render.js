@@ -21,6 +21,13 @@ function resolveOptions(userOptions = {}) {
 		userOptions.theme && typeof userOptions.theme === "object"
 			? userOptions.theme
 			: themes[userOptions.theme || "default"] || themes.default;
+	const mergedTheme = {
+		...themes.default,
+		...(theme || {}),
+		// optional fallback: if only `code` provided, reuse for inline/block
+		inlineCode: theme?.inlineCode || theme?.code || themes.default.inlineCode,
+		blockCode: theme?.blockCode || theme?.code || themes.default.blockCode,
+	};
 	const highlighter = userOptions.highlighter;
 	const listIndent = userOptions.listIndent ?? 2;
 	const quotePrefix = userOptions.quotePrefix ?? "│ ";
@@ -29,7 +36,7 @@ function resolveOptions(userOptions = {}) {
 		width: baseWidth,
 		color,
 		hyperlinks: effectiveHyperlinks,
-		theme,
+		theme: mergedTheme,
 		highlighter,
 		listIndent,
 		quotePrefix,
@@ -110,15 +117,18 @@ function renderHr(ctx) {
 }
 
 function renderBlockquote(node, ctx, indentLevel) {
-	const content = renderChildren(node.children, ctx, indentLevel + 1);
+	// Render blockquote children as text, then wrap with the quote prefix so
+	// wrapping accounts for prefix width.
+	const inner = renderChildren(node.children, ctx, indentLevel);
 	const prefix = ctx.style(ctx.options.quotePrefix, ctx.options.theme.quote);
-	const lines = content
-		.join("")
-		.split("\n")
-		.map((l) => (l === "" ? "" : prefix + l))
-		.join("\n")
-		.replace(/\n+$/, "");
-	return [`${lines}\n`];
+	const text = inner.join("").trimEnd();
+	const wrapped = wrapWithPrefix(
+		text,
+		ctx.options.width ?? 80,
+		ctx.options.wrap,
+		prefix,
+	);
+	return wrapped.map((l) => `${l}\n`);
 }
 
 function renderList(node, ctx, indentLevel) {
@@ -152,6 +162,11 @@ function renderListItem(
 		.join("")
 		.trimEnd()
 		.split("\n");
+
+	// Drop leading blank lines so bullets prefix real content (e.g., headings in lists)
+	while (content.length && content[0].trim() === "") {
+		content.shift();
+	}
 
 	const isTask = typeof node.checked === "boolean";
 	const box = isTask ? (node.checked ? "[x]" : "[ ]") : null;

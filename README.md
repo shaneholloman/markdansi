@@ -44,6 +44,7 @@ const plain = strip('link to [x](https://example.com)');
 const custom = createRenderer({
   theme: {
     ...themes.default,
+    code: { color: 'cyan', dim: true }, // fallback used for inline/block
     inlineCode: { color: 'red' },
     blockCode: { color: 'green' },
   },

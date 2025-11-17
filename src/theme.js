@@ -29,9 +29,9 @@ const bright = {
 };
 
 export const themes = {
-	default: base,
-	dim,
-	bright,
+	default: Object.freeze(base),
+	dim: Object.freeze(dim),
+	bright: Object.freeze(bright),
 };
 
 export function createStyler({ color }) {

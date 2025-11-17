@@ -30,6 +30,7 @@ export type Theme = {
 	emph?: StyleIntent;
 	inlineCode?: StyleIntent;
 	blockCode?: StyleIntent;
+	code?: StyleIntent;
 	link?: StyleIntent;
 	quote?: StyleIntent;
 	hr?: StyleIntent;
