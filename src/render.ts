@@ -459,11 +459,13 @@ function renderCodeBlock(node: Code, ctx: RenderContext): string[] {
 		labelRaw.length,
 	);
 	const topPadding = Math.max(0, innerWidth - labelRaw.length + 1);
-	const top =
+	const topRaw =
 		labelRaw.length > 0
 			? `┌ ${labelStyled}${"─".repeat(topPadding)}┐`
 			: `┌ ${"─".repeat(innerWidth)} ┐`;
-	const bottom = `└${"─".repeat(innerWidth + 2)}┘`;
+	const bottomRaw = `└${"─".repeat(innerWidth + 2)}┘`;
+	const top = ctx.style(topRaw, { dim: true });
+	const bottom = ctx.style(bottomRaw, { dim: true });
 
 	const boxLines = contentLines.map((ln: string) => {
 		const pad = Math.max(0, innerWidth - visibleWidth(ln));

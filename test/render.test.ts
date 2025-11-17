@@ -387,16 +387,20 @@ ${Array.from({ length: 12 }, (_, i) => `l${i + 1}`).join("\n")}
 
 	it("renders language label in code box header", () => {
 		const md = "```bash\nthis line is definitely longer than the label\n```";
-		const out = render(md, { color: false, wrap: false });
-		const firstLine = out.split("\n")[0];
+		const out = render(md, { color: true, wrap: false });
+		const firstLineRaw = out.split("\n")[0];
 		const bodyLine = out.split("\n")[1];
 		const bottomLine = out.split("\n")[out.split("\n").length - 3];
+		const firstLine = stripAnsi(firstLineRaw);
 		expect(firstLine.startsWith("┌")).toBe(true);
 		expect(firstLine).toContain("[bash]");
 		expect(firstLine).toMatch(/┌ \[bash]─+┐/);
 		// Header width should match body/bottom widths
-		expect(firstLine.length).toBe(bodyLine.length);
-		expect(firstLine.length).toBe(bottomLine.length);
+		expect(firstLine.length).toBe(stripAnsi(bodyLine).length);
+		expect(firstLine.length).toBe(stripAnsi(bottomLine).length);
+		// Borders should be dimmed (SGR 2)
+		expect(firstLineRaw).toContain("\u001B[2m");
+		expect(bottomLine).toContain("\u001B[2m");
 	});
 
 	it("omits label when language is absent", () => {
