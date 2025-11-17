@@ -180,7 +180,24 @@ function renderChildren(
 	isTightList = false,
 ): string[] {
 	const out: string[][] = [];
-	for (const node of children) {
+	for (let i = 0; i < children.length; i += 1) {
+		const node = children[i];
+		if (!node) continue;
+		// Heuristic: some sources emit a standalone "[lang]" line before a fenced block.
+		if (
+			node.type === "paragraph" &&
+			node.children.length === 1 &&
+			node.children[0]?.type === "text"
+		) {
+			const langMatch = node.children[0]?.value.trim().match(/^\[([^\]]+)]$/);
+			const next = children[i + 1];
+			if (langMatch && next && next.type === "code" && !next.lang) {
+				(next as Code).lang = langMatch[1];
+				i += 1; // skip label paragraph, render the code next
+				out.push(renderNode(next, ctx, indentLevel, isTightList));
+				continue;
+			}
+		}
 		out.push(renderNode(node, ctx, indentLevel, isTightList));
 	}
 	return out.flat();
