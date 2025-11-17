@@ -3,6 +3,8 @@
 
 Tiny, dependency-light Markdown → ANSI renderer and CLI for modern Node (>=22). Focuses on readable terminal output with sensible wrapping, GFM support (tables, task lists, strikethrough), optional OSC‑8 hyperlinks, and zero built‑in syntax highlighting (pluggable hook).
 
+Published on npm as `markdansi`.
+
 ## Install
 
 ```bash
