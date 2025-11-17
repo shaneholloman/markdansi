@@ -1,7 +1,7 @@
 import stripAnsi from "strip-ansi";
 import supportsHyperlinks from "supports-hyperlinks";
-import { describe, expect, it } from "vitest";
-import { parseArgs } from "../src/cli.ts";
+import { describe, expect, it, vi } from "vitest";
+import { handleStdoutEpipe, parseArgs } from "../src/cli.ts";
 import { hyperlinkSupported } from "../src/hyperlink.ts";
 import { render, strip } from "../src/index.ts";
 import { createStyler, themes } from "../src/theme.ts";
@@ -359,7 +359,9 @@ ${Array.from({ length: 12 }, (_, i) => `l${i + 1}`).join("\n")}
 		const top = lines[0];
 		const body = lines[1];
 		// Header should be wider or equal to body content
-		expect(top.length).toBeGreaterThanOrEqual(body.length - 2 /* box padding */);
+		expect(top.length).toBeGreaterThanOrEqual(
+			body.length - 2 /* box padding */,
+		);
 		expect(top).toContain("[superlonglanguageid]");
 	});
 
@@ -367,6 +369,23 @@ ${Array.from({ length: 12 }, (_, i) => `l${i + 1}`).join("\n")}
 		const md = "```bash\nfoo\n```";
 		const out = render(md, { color: false, wrap: false });
 		expect(out.startsWith("┌")).toBe(true);
+	});
+});
+
+describe("cli stdout EPIPE handling", () => {
+	it("exits cleanly on EPIPE", () => {
+		const exitSpy = vi
+			.spyOn(process, "exit")
+			.mockReturnValue(undefined as never);
+		handleStdoutEpipe();
+		const error = Object.assign(new Error("epipe"), { code: "EPIPE" });
+		const listener = process.stdout.listeners("error").at(-1) as
+			| ((err: NodeJS.ErrnoException) => void)
+			| undefined;
+		expect(listener).toBeDefined();
+		listener?.(error as NodeJS.ErrnoException);
+		expect(exitSpy).toHaveBeenCalledWith(0);
+		exitSpy.mockRestore();
 	});
 });
 

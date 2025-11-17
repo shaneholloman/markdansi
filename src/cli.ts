@@ -12,6 +12,21 @@ type CliArgs = Partial<RenderOptions> & {
 };
 
 /**
+ * Ignore EPIPE when downstream (e.g., `head`) closes early.
+ */
+export function handleStdoutEpipe(): void {
+	process.stdout.on("error", (err: NodeJS.ErrnoException) => {
+		if (err && err.code === "EPIPE") {
+			process.exit(0);
+			return;
+		}
+		// For other stdout errors, fail fast but don't throw unhandled.
+		console.error(err instanceof Error ? err.message : err);
+		process.exit(1);
+	});
+}
+
+/**
  * Parse CLI arguments into RenderOptions-ish object (plus in/out paths).
  */
 export function parseArgs(argv: string[]): CliArgs {
@@ -75,6 +90,7 @@ export function parseArgs(argv: string[]): CliArgs {
  * CLI entrypoint.
  */
 function main(): void {
+	handleStdoutEpipe();
 	const args = parseArgs(process.argv);
 	if (args.help) {
 		process.stdout.write(`markdansi options:
