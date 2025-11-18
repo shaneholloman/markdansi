@@ -6,6 +6,7 @@ Tiny, dependency-light Markdown → ANSI renderer and CLI for modern Node (>=22)
 Published on npm as `markdansi`.
 
 ## Install
+Grab it from npm; no native deps, so install is instant on Node 22+.
 
 ```bash
 pnpm add markdansi
@@ -14,6 +15,7 @@ npm install markdansi
 ```
 
 ## CLI
+Quick one-shot renderer: pipe Markdown in, ANSI comes out. Flags let you pick width, wrap, colors, links, and table/list styling.
 
 ```bash
 markdansi [--in FILE] [--out FILE] [--width N] [--no-wrap] [--no-color] [--no-links] [--theme default|dim|bright]
@@ -27,6 +29,7 @@ markdansi [--in FILE] [--out FILE] [--width N] [--no-wrap] [--no-color] [--no-li
 - Lists/quotes: `--list-indent` sets spaces per nesting level (default 2); `--quote-prefix` sets blockquote prefix (default `│ `).
 
 ## Library
+Use the renderer directly in Node/TS for customizable theming, optional syntax highlighting hooks, and OSC‑8 link control.
 
 ```js
 import { render, createRenderer, strip, themes } from 'markdansi';
@@ -102,7 +105,7 @@ console.log(highlighted('```ts\nconst x: number = 1\n```\n```swift\nlet x = 1\n`
 
 ## Status
 
-Version: `0.1.2` (released)  
+Version: `0.1.3` (released)  
 Tests: `pnpm test`  
 License: MIT
 
