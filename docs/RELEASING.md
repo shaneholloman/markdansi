@@ -16,7 +16,11 @@ This merges the checklist and the running release log into one file for convenie
   - Title: `Markdansi <version>`.
   - Body: paste the matching `CHANGELOG` section as bullets.
   - Assets: GitHub auto-attaches `Source code (zip|tar.gz)` for the tag. Optionally upload `markdansi-<version>.tgz` from `npm pack` and SHA256/SHA1 checksums if desired.
-- Post-publish: `npm view markdansi version`; quick CLI check `pnpm dlx markdansi --help` (or `npx markdansi --help`); sample render `pnpm markdansi -- --in README.md --no-wrap`.
+- Post-publish/verify:
+  - `npm view markdansi version` matches the tag.
+  - `gh release view v<version>` shows title + bullet list with no stray `\n`/wrap issues.
+  - Confirm assets show at least GitHub’s auto “Source code (zip|tar.gz)” entries.
+  - Quick smoke: `pnpm dlx markdansi --help` (or `npx markdansi --help`) and `pnpm markdansi -- --in README.md --no-wrap`.
 
 ## Release log
 
