@@ -9,6 +9,8 @@ Published on npm as `markdansi`.
 Grab it from npm; no native deps, so install is instant on Node 22+.
 
 ```bash
+bun add markdansi
+# or
 pnpm add markdansi
 # or
 npm install markdansi
