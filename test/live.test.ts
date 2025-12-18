@@ -38,4 +38,18 @@ describe("live renderer", () => {
 		expect(out).not.toContain("\u001b[?2026l");
 		expect(out).toContain("\u001b[2K");
 	});
+
+	it("keeps the overwrite region stable when the frame shrinks", () => {
+		const writes: string[] = [];
+		const live = createLiveRenderer({
+			write: (chunk) => writes.push(chunk),
+			renderFrame: (input) => input,
+		});
+
+		live.render("a\nb\nc");
+		live.render("a");
+		live.render("a\nb");
+
+		expect(writes[2]).toContain("\u001b[3A\r");
+	});
 });

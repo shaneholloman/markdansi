@@ -77,7 +77,7 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 		if (synchronizedOutput) frame += ESU;
 		options.write(frame);
 
-		previousLines = newLines;
+		previousLines = maxLines;
 	};
 
 	const finish = () => {
