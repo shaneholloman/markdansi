@@ -118,12 +118,6 @@ console.log(highlighted('```ts\nconst x: number = 1\n```\n```swift\nlet x = 1\n`
 - `codeBox`: draw a box around fenced code (default true); `codeGutter` shows line numbers; `codeWrap` wraps code lines by default.
 - `highlighter(code, lang)`: optional hook to recolor code blocks; must not add/remove newlines.
 
-## Status
-
-Version: `0.1.4` (released)  
-Tests: `pnpm test`  
-License: MIT
-
 ## Notes
 
 - Code blocks wrap to the render width by default; disable with `codeWrap=false`. If `lang` is present, a faint `[lang]` label is shown and boxes use unicode borders.
@@ -131,6 +125,8 @@ License: MIT
 - Tables use unicode borders by default, include padding, respect GFM alignment, and truncate long cells with `…` so layouts stay tidy. Turn off truncation with `tableTruncate=false`.
 - Tight vs loose lists follow GFM; task items render `[ ]` / `[x]`.
 
-See `docs/spec.md` for full behavior details.
+See [`docs/spec.md`](docs/spec.md) for full behavior details.
 
 Looking for the Swift port? Check out [Swiftdansi](https://github.com/steipete/Swiftdansi).
+
+MIT license.
