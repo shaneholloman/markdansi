@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5 (2025-12-18)
+
+### Highlights
+- Add a live in-place renderer (`createLiveRenderer`) that can re-render markdown streams with synchronized output framing.
+
 ## 0.1.4 (2025-12-18)
 
 ### Highlights
