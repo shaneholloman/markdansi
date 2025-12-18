@@ -13,7 +13,7 @@
 		"./cli": "./dist/cli.js"
 	},
 	"bin": {
-		"markdansi": "./dist/cli.js"
+		"markdansi": "dist/cli.js"
 	},
 	"scripts": {
 		"build": "pnpm lint && pnpm test && pnpm compile",
@@ -37,7 +37,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/steipete/Markdansi.git"
+		"url": "git+https://github.com/steipete/Markdansi.git"
 	},
 	"bugs": {
 		"url": "https://github.com/steipete/Markdansi/issues"
