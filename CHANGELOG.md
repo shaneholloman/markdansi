@@ -3,7 +3,7 @@
 ## 0.1.4 (Unreleased)
 
 ### Highlights
-- Fix TSX/CommonJS consumers failing to resolve the package export by adding a `default` export condition.
+- Fix TSX/CommonJS consumers failing to resolve the package export by adding a `default` export condition (issue #1).
 
 ## 0.1.3 (2025-11-18)
 

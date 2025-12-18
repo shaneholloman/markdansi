@@ -38,6 +38,14 @@ markdansi [--in FILE] [--out FILE] [--width N] [--no-wrap] [--no-color] [--no-li
 ## Library
 Use the renderer directly in Node/TS for customizable theming, optional syntax highlighting hooks, and OSC‑8 link control.
 
+### ESM / CommonJS
+Markdansi ships ESM (`"type":"module"`). If you’re in CommonJS (or a tool like `tsx` running your script as CJS), prefer dynamic import:
+
+```js
+const { render } = await import('markdansi');
+console.log(render('# hello'));
+```
+
 ```js
 import { render, createRenderer, strip, themes } from 'markdansi';
 
