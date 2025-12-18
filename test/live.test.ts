@@ -22,6 +22,19 @@ describe("live renderer", () => {
 		expect(out).toContain("\u001b[1A\r");
 	});
 
+	it("does not move the cursor up on the first frame", () => {
+		const writes: string[] = [];
+		const live = createLiveRenderer({
+			write: (chunk) => writes.push(chunk),
+			renderFrame: (input) => input,
+		});
+
+		live.render("hello");
+
+		expect(writes[0]).not.toMatch(/\u001b\[\d+A/);
+		expect(writes[0]).toContain("\r");
+	});
+
 	it("can disable synchronized output framing", () => {
 		const writes: string[] = [];
 		const live = createLiveRenderer({
@@ -39,6 +52,22 @@ describe("live renderer", () => {
 		expect(out).toContain("\u001b[2K");
 	});
 
+	it("can disable cursor hiding", () => {
+		const writes: string[] = [];
+		const live = createLiveRenderer({
+			write: (chunk) => writes.push(chunk),
+			renderFrame: (input) => input,
+			hideCursor: false,
+		});
+
+		live.render("hello");
+		live.finish();
+
+		const out = writes.join("");
+		expect(out).not.toContain("\u001b[?25l");
+		expect(out).not.toContain("\u001b[?25h");
+	});
+
 	it("keeps the overwrite region stable when the frame shrinks", () => {
 		const writes: string[] = [];
 		const live = createLiveRenderer({
@@ -51,5 +80,47 @@ describe("live renderer", () => {
 		live.render("a\nb");
 
 		expect(writes[2]).toContain("\u001b[3A\r");
+	});
+
+	it("clears removed lines when the frame shrinks", () => {
+		const writes: string[] = [];
+		const live = createLiveRenderer({
+			write: (chunk) => writes.push(chunk),
+			renderFrame: (input) => input,
+		});
+
+		live.render("a\nb\nc");
+		live.render("a");
+
+		const second = writes[1];
+		expect(second).toContain("\u001b[3A\r");
+		expect((second.match(/\u001b\[2K/g) ?? []).length).toBe(3);
+		expect(second).toContain("a\n");
+		expect(second).not.toContain("b");
+		expect(second).not.toContain("c");
+	});
+
+	it("adds a trailing newline when renderFrame omits it", () => {
+		const writes: string[] = [];
+		const live = createLiveRenderer({
+			write: (chunk) => writes.push(chunk),
+			renderFrame: () => "x",
+		});
+
+		live.render("ignored");
+
+		expect(writes[0]).toContain("\u001b[2Kx\n");
+	});
+
+	it("finish is a no-op if cursor was never hidden", () => {
+		const writes: string[] = [];
+		const live = createLiveRenderer({
+			write: (chunk) => writes.push(chunk),
+			renderFrame: (input) => input,
+			hideCursor: false,
+		});
+
+		live.finish();
+		expect(writes).toEqual([]);
 	});
 });
