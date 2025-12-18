@@ -6,7 +6,7 @@
 
 ![npm](https://img.shields.io/npm/v/markdansi) ![license MIT](https://img.shields.io/badge/license-MIT-blue.svg) ![node >=22](https://img.shields.io/badge/node-%3E%3D22-brightgreen) ![tests vitest](https://img.shields.io/badge/tests-vitest-blue?logo=vitest)
 
-Tiny, dependency-light Markdown → ANSI renderer and CLI for modern Node (>=22). Focuses on readable terminal output with sensible wrapping, GFM support (tables, task lists, strikethrough), optional OSC‑8 hyperlinks, and zero built‑in syntax highlighting (pluggable hook). Written in TypeScript, ships ESM.
+Tiny, dependency-light Markdown → ANSI renderer and CLI for modern Node (>=22). Focuses on readable terminal output with sensible wrapping, GFM support (tables, task lists, strikethrough), optional OSC‑8 hyperlinks, and zero built‑in syntax highlighting (pluggable hook). Includes live in-place terminal rendering for streaming updates (`createLiveRenderer`). Written in TypeScript, ships ESM.
 
 Published on npm as `markdansi`.
 
@@ -44,6 +44,25 @@ Markdansi ships ESM (`"type":"module"`). If you’re in CommonJS (or a tool like
 ```js
 const { render } = await import('markdansi');
 console.log(render('# hello'));
+```
+
+### Live streaming / in-place rendering
+For streaming output (LLM responses, logs, progress), use `createLiveRenderer` to re-render and redraw in-place. Uses terminal “synchronized output” when supported.
+
+```js
+import { createLiveRenderer, render } from 'markdansi';
+
+const live = createLiveRenderer({
+  renderFrame: (markdown) => render(markdown),
+  write: process.stdout.write.bind(process.stdout),
+});
+
+let buffer = '';
+buffer += '# Hello\\n';
+live.render(buffer);
+buffer += '\\nMore…\\n';
+live.render(buffer);
+live.finish();
 ```
 
 ```js
