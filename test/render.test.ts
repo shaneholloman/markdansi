@@ -110,6 +110,37 @@ describe("wrapping", () => {
 	it("wrapText returns original when width <= 0", () => {
 		expect(wrapText("abc", 0, true)).toEqual(["abc"]);
 	});
+
+	it("avoids orphaned trailing articles when wrapping", () => {
+		const md =
+			'* **Section IV (signature):** A concluding line stating the document was "typed on 2025-12-18 with a stubborn cursor."';
+		const out = strip(md, { ...noColor, width: 100, wrap: true }).trimEnd();
+		const lines = out.split("\n");
+		expect(lines).toHaveLength(2);
+		expect(lines[0]).not.toMatch(/\bwith a\s*$/);
+		expect(lines[1]).toContain("with a stubborn cursor.");
+	});
+
+	it("moves a trailing article to the next line when possible", () => {
+		expect(wrapText("hello the world", 11, true)).toEqual([
+			"hello",
+			"the world",
+		]);
+	});
+
+	it("moves a trailing preposition+article phrase to the next line when possible", () => {
+		expect(wrapText("walk in the rain", 11, true)).toEqual([
+			"walk",
+			"in the rain",
+		]);
+	});
+
+	it("does not treat punctuated words as orphan candidates", () => {
+		expect(wrapText("hello the, world", 11, true)).toEqual([
+			"hello the,",
+			"world",
+		]);
+	});
 });
 
 describe("lists and tasks", () => {

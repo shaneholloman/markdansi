@@ -2,7 +2,7 @@
 
 ## 0.1.7 (Unreleased)
 
-- _No changes yet._
+- Avoid orphaned trailing articles/prepositions at the end of wrapped lines.
 
 ## 0.1.6 (2025-12-19)
 
