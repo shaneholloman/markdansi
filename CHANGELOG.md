@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6 (2025-12-19)
+
+- Collapse soft line breaks inside paragraphs/list items into spaces while preserving hard breaks.
+- Trim indentation artifacts on soft-wrapped lines (e.g. list item continuations).
+- Add regression coverage for soft/hard break normalization.
+
 ## 0.1.5 (2025-12-18)
 
 ### Highlights

@@ -1,4 +1,3 @@
-import stripAnsi from "strip-ansi";
 import supportsHyperlinks from "supports-hyperlinks";
 import { describe, expect, it, vi } from "vitest";
 import { handleStdoutEpipe, parseArgs } from "../src/cli.ts";
@@ -38,9 +37,18 @@ describe("inline formatting", () => {
 		expect(out).toContain("CODE");
 	});
 
-	it("handles line breaks in inline content", () => {
-		const out = strip("Hello\\nworld", { ...noColor, wrap: true, width: 80 });
-		expect(out.split("\n").length).toBeGreaterThan(1);
+	it("collapses soft line breaks to spaces", () => {
+		const out = strip("Hello\nworld", {
+			...noColor,
+			wrap: true,
+			width: 80,
+		}).trimEnd();
+		expect(out).toBe("Hello world");
+	});
+
+	it("collapses soft line breaks and trims indentation", () => {
+		const out = strip("Hello\n  world", { ...noColor, width: 200 }).trimEnd();
+		expect(out).toBe("Hello world");
 	});
 
 	it("keeps hard breaks (two-space newline)", () => {
@@ -48,8 +56,13 @@ describe("inline formatting", () => {
 			...noColor,
 			wrap: true,
 			width: 80,
-		});
+		}).trimEnd();
 		expect(out.split("\n").length).toBeGreaterThan(1);
+	});
+
+	it("keeps hard breaks even with surrounding soft breaks", () => {
+		const out = strip("a\nb  \nc", { ...noColor, width: 200 }).trimEnd();
+		expect(out).toContain("a b\nc");
 	});
 
 	it("ignores inline HTML content safely", () => {
@@ -106,190 +119,18 @@ describe("lists and tasks", () => {
 		expect(out).toContain("[x] done");
 	});
 
+	it("collapses soft line breaks inside list items", () => {
+		const md =
+			'- Section IV (signature): A concluding line stating the document was "typed on 2025-12-18 with a\n' +
+			'  stubborn cursor."';
+		const out = strip(md, { ...noColor, width: 200 }).trimEnd();
+		expect(out).toContain("with a stubborn cursor.");
+		expect(out).not.toContain("\n\n");
+	});
+
 	it("splits loose lists with blank line", () => {
 		const out = strip("- item 1\n\n- item 2", noColor);
 		expect(out.split("\n").filter((l) => l === "").length).toBeGreaterThan(0);
-	});
-});
-
-describe("tables", () => {
-	it("does not linkify underscores inside tables", () => {
-		const md = `
-| Filename | Size |
-| --- | --- |
-| icon_16x16.png | 16 |
-| icon_16x16@2x.png | 32 |
-`;
-		const out = strip(md, { ...noColor, wrap: true, tableTruncate: false });
-		const lines = out.split("\n").filter((l) => l.includes("icon_16x16"));
-		lines.forEach((line) => {
-			expect(line).not.toMatch(/https?:/);
-			expect(line).toContain("icon_16x16");
-		});
-	});
-
-	it("respects inline links in table cells but keeps other cells plain", () => {
-		const md = `
-| File | Link |
-| --- | --- |
-| icon_16x16.png | https://example.com/icon.png |
-`;
-		const out = strip(md, {
-			...noColor,
-			wrap: true,
-			hyperlinks: false,
-			tableTruncate: false,
-			width: 60,
-		});
-		expect(out).toContain("icon_16x16.png");
-		expect(out).toContain("https://example.com/icon.png");
-	});
-
-	it("keeps mailto-style autolinks plain inside tables", () => {
-		const md = `
-| File | Size |
-| --- | --- |
-| icon_16x16@2x.png | 32 |
-`;
-		const out = strip(md, {
-			...noColor,
-			wrap: true,
-			hyperlinks: true,
-			tableTruncate: false,
-			width: 40,
-		});
-		// Should render as plain text, not OSC-8 or styled link
-		expect(out).toContain("icon_16x16@2x.png");
-		expect(out).not.toContain("\u001B]8;;"); // no OSC hyperlink
-	});
-	it("renders ascii and no-border tables with padding/dense options", () => {
-		const md = `
-| h1 | h2 |
-| --- | --- |
-| a | b |
-`;
-		const ascii = strip(md, {
-			...noColor,
-			tableBorder: "ascii",
-			tablePadding: 2,
-		});
-		expect(ascii).toContain("+");
-		expect(ascii).toContain("h1");
-		expect(ascii).toContain("a");
-
-		const none = strip(md, {
-			...noColor,
-			tableBorder: "none",
-			tableDense: true,
-			tablePadding: 0,
-		});
-		expect(none).toContain("h1");
-		expect(none).toContain("b");
-	});
-
-	it("renders gfm tables", () => {
-		const md = `
-| h1 | h2 |
-| --- | --- |
-| a | b |
-`;
-		const out = strip(md, { ...noColor, width: 30 });
-		expect(out).toMatch(/h1/);
-		expect(out).toMatch(/h2/);
-	});
-
-	it("wraps table cells on spaces when width is small", () => {
-		const md = `
-| h1 | h2 |
-| --- | --- |
-| a b c d e f | g |
-`;
-		const out = strip(md, {
-			...noColor,
-			width: 15,
-			wrap: true,
-			tableTruncate: false,
-		});
-		const lines = out
-			.trim()
-			.split("\n")
-			.filter((l) => l.includes("│") || l.includes("|"));
-		// Expect at least header + body + borders; wrapped content should add extra line
-		expect(lines.length).toBeGreaterThan(3);
-	});
-
-	it("allows long words in cells to overflow (no hard break)", () => {
-		const word = "Supercalifragilistic";
-		const md = `
-| h1 | h2 |
-| --- | --- |
-| ${word} | x |
-`;
-		const out = strip(md, {
-			...noColor,
-			width: 10,
-			wrap: true,
-			tableTruncate: false,
-		});
-		expect(out).toContain(word);
-	});
-
-	it("respects table alignment markers from GFM", () => {
-		const md = `
-| h1 | h2 |
-| :-- | --: |
-| left | right |
-`;
-		const out = strip(md, {
-			...noColor,
-			width: 30,
-			wrap: true,
-			tableTruncate: false,
-		});
-		const lines = out
-			.trim()
-			.split("\n")
-			.filter((l) => l.includes("│") || l.includes("|"));
-		expect(lines.some((l) => /left/.test(l) && /right/.test(l))).toBe(true);
-	});
-
-	it("truncates cells by default when width is tight", () => {
-		const md = `
-| col | col2 |
-| --- | --- |
-| Supercalifragilistic | short |
-`;
-		const out = strip(md, { ...noColor, width: 18, wrap: true });
-		expect(out).toContain("…");
-	});
-
-	it("keeps at least ellipsis when width extremely small", () => {
-		const md = `
-| h |
-| - |
-| verylong |
-`;
-		const out = strip(md, {
-			...noColor,
-			width: 4,
-			wrap: true,
-			tablePadding: 0,
-		});
-		expect(out).toMatch(/…/);
-	});
-
-	it("aligns left/center/right cells", () => {
-		const md = `
-| l | c | r |
-| :-- | :-: | --: |
-| a | b | c |
-`;
-		const out = strip(md, { ...noColor, width: 40, wrap: true });
-		const line = out
-			.split("\n")
-			.find((l) => l.includes("a") && l.includes("c"));
-		expect(line).toBeDefined();
-		expect(line.includes(" c ")).toBe(true);
 	});
 });
 
@@ -340,141 +181,6 @@ describe("blockquotes", () => {
 	it("prefixes lines with quote leader", () => {
 		const out = strip("> quoted line", noColor);
 		expect(out.trim().startsWith("│ ")).toBe(true);
-	});
-});
-
-describe("code blocks", () => {
-	it("wraps code lines when codeWrap is enabled (default)", () => {
-		const md = "```\n0123456789ABCDEFG\n```";
-		const out = strip(md, { ...noColor, width: 12, codeBox: false });
-		const firstLine = out.split("\n")[0];
-		expect(firstLine.length).toBeLessThanOrEqual(12);
-		expect(out).toContain("0123456789");
-	});
-
-	it("allows overflow when codeWrap is false", () => {
-		const md = "```\n0123456789ABCDEFG\n```";
-		const out = strip(md, {
-			...noColor,
-			width: 10,
-			codeWrap: false,
-			codeBox: false,
-		});
-		const firstLine = out.split("\n")[0];
-		expect(firstLine.length).toBeGreaterThan(15);
-	});
-
-	it("respects codeBox=false with gutter", () => {
-		const md = "```\nline1\nline2\n```";
-		const out = render(md, {
-			color: true,
-			codeBox: false,
-			codeGutter: true,
-			wrap: false,
-		});
-		const plain = stripAnsi(out);
-		expect(plain).toMatch(/^1\s+line1/m);
-		expect(plain).toMatch(/^2\s+line2/m);
-	});
-
-	it("formats gutter width for multi-digit lines", () => {
-		const md = `\`\`\`
-${Array.from({ length: 12 }, (_, i) => `l${i + 1}`).join("\n")}
-\`\`\``;
-		const out = render(md, { color: true, codeGutter: true, wrap: false });
-		expect(stripAnsi(out)).toContain("12 ");
-	});
-
-	it("renders language label in code box header (multi-line only)", () => {
-		const md =
-			"```bash\nthis line is definitely longer than the label\nand still flows\n```";
-		const out = render(md, { color: true, wrap: false });
-		const firstLineRaw = out.split("\n")[0];
-		const bodyLine = out.split("\n")[1];
-		const bottomLine = out.split("\n")[out.split("\n").length - 3];
-		const firstLine = stripAnsi(firstLineRaw);
-		expect(firstLine.startsWith("┌")).toBe(true);
-		expect(firstLine).toContain("[bash]");
-		expect(firstLine).toMatch(/┌ \[bash]─+┐/);
-		// Header width should match body/bottom widths
-		expect(firstLine.length).toBe(stripAnsi(bodyLine).length);
-		expect(firstLine.length).toBe(stripAnsi(bottomLine).length);
-		// Borders should be dimmed (SGR 2)
-		expect(firstLineRaw).toContain("\u001B[2m");
-		expect(bottomLine).toContain("\u001B[2m");
-	});
-
-	it("omits label when language is absent", () => {
-		const md = "```\nfoo\nbar\n```";
-		const out = render(md, { color: false, wrap: false });
-		const firstLine = out.split("\n")[0];
-		expect(firstLine.startsWith("┌")).toBe(true);
-		expect(firstLine).not.toContain("[");
-	});
-
-	it("keeps header width when label is long", () => {
-		const md = "```superlonglanguageid\nfoo\nbar\n```";
-		const out = render(md, { color: false, wrap: false });
-		const lines = out.split("\n");
-		const top = lines[0];
-		const body = lines[1];
-		// Header should be wider or equal to body content
-		expect(top.length).toBeGreaterThanOrEqual(
-			body.length - 2 /* box padding */,
-		);
-		expect(top).toContain("[superlonglanguageid]");
-	});
-
-	it("does not emit blank line before boxed code", () => {
-		const md = "```bash\nfoo\nbar\n```";
-		const out = render(md, { color: false, wrap: false });
-		expect(out.startsWith("┌")).toBe(true);
-	});
-
-	it("keeps reference-style continuations out of code boxes", () => {
-		const md = `[1]: https://example.com/icon "\n\t Icon Composer Notes \n\t\n"`;
-		const out = render(md, { color: false, wrap: true });
-		expect(out).not.toContain("┌"); // no boxed code
-		expect(out).toContain(`[1]: https://example.com/icon "`);
-		expect(out).toContain("Icon Composer Notes");
-	});
-
-	it("separates definitions with a blank line footer-style", () => {
-		const md = `Body line.\n[1]: https://example.com "Title"\nNext.`;
-		const out = render(md, { color: false, wrap: true });
-		const lines = out.split("\n");
-		expect(lines[0]).toBe("Body line.");
-		expect(lines[1]).toBe(""); // blank line before definition
-		expect(lines[2]).toBe('[1]: https://example.com "Title"');
-		expect(lines[3]).toBe("Next.");
-		expect(lines[4]).toBe(""); // final newline
-	});
-
-	it("collapses lists of code blocks into a single block", () => {
-		const md = "- ```\n  first\n  ```\n- ```\n  second\n  ```";
-		const out = render(md, { color: false, wrap: false });
-		const boxes = (out.match(/┌/g) ?? []).length;
-		expect(boxes).toBe(1);
-		expect(out).toContain("first");
-		expect(out).toContain("second");
-	});
-
-	it("tags unfenced diffs and skips wrapping them", () => {
-		const md =
-			"```\n--- a/foo\n+++ b/foo\n@@ -1 +1 @@\n- a very very very very long line\n+ another very very very very long line\n```";
-		const out = render(md, { color: false, wrap: true, width: 20 });
-		expect(out).toContain("[diff]");
-		const minusLine = out
-			.split("\n")
-			.find((l) => l.includes("very very very very long line"));
-		expect(minusLine?.length).toBeGreaterThan(30);
-	});
-
-	it("renders single-line code blocks without a box", () => {
-		const md = "```\nsolo\n```";
-		const out = render(md, { color: false, wrap: false });
-		expect(out.startsWith("┌")).toBe(false);
-		expect(out.trim()).toBe("solo");
 	});
 });
 

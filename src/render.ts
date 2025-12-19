@@ -422,7 +422,7 @@ function renderParagraph(
 	ctx: RenderContext,
 	indentLevel: number,
 ): string[] {
-	const text = renderInline(node.children, ctx);
+	const text = normalizeParagraphInlineText(renderInline(node.children, ctx));
 	const prefix = " ".repeat(ctx.options.listIndent * indentLevel);
 	const rawLines = text.split("\n");
 	const normalized: string[] = [];
@@ -667,13 +667,65 @@ function renderInline(
 				out += renderLink(node, ctx);
 				break;
 			case "break":
-				out += "\n";
+				out += HARD_BREAK;
 				break;
 			default:
 				if ("value" in node && typeof node.value === "string")
 					out += node.value;
 		}
 	}
+	return out;
+}
+
+const HARD_BREAK = "\u000B";
+
+function normalizeParagraphInlineText(text: string): string {
+	if (!text.includes("\n") && !text.includes(HARD_BREAK)) return text;
+
+	type BreakKind = "soft" | "hard";
+	const segments: Array<{ text: string; breakAfter?: BreakKind }> = [];
+	let current = "";
+
+	for (let i = 0; i < text.length; i += 1) {
+		const ch = text[i];
+		if (ch === "\n" || ch === HARD_BREAK) {
+			segments.push({
+				text: current,
+				breakAfter: ch === HARD_BREAK ? "hard" : "soft",
+			});
+			current = "";
+			continue;
+		}
+		current += ch;
+	}
+	segments.push({ text: current });
+
+	const defPattern = /^\[[^\]]+]:\s+\S/;
+	let out = segments[0]?.text ?? "";
+
+	for (let i = 0; i < segments.length - 1; i += 1) {
+		const kind = segments[i]?.breakAfter ?? "soft";
+		const left = segments[i]?.text ?? "";
+		const right = segments[i + 1]?.text ?? "";
+
+		if (kind === "hard") {
+			out += "\n";
+			out += right;
+			continue;
+		}
+
+		const leftTrim = left.trimStart();
+		const rightTrim = right.trimStart();
+		const keepNewline =
+			left === "" ||
+			right === "" ||
+			defPattern.test(leftTrim) ||
+			defPattern.test(rightTrim);
+
+		out += keepNewline ? "\n" : " ";
+		out += rightTrim;
+	}
+
 	return out;
 }
 
