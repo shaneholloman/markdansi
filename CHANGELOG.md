@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.7 (Unreleased)
+
+- _No changes yet._
+
 ## 0.1.6 (2025-12-19)
 
 - Collapse soft line breaks inside paragraphs/list items into spaces while preserving hard breaks.
