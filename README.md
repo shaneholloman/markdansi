@@ -60,6 +60,7 @@ const live = createLiveRenderer({
     // Stop live rendering and fall back to a final print.
   },
   clearOnOverflow: true,
+  clearScrollbackOnOverflow: true,
 });
 
 let buffer = '';

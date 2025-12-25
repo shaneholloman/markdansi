@@ -2,7 +2,7 @@
 
 ## 0.1.8 (Unreleased)
 
-- Add `maxRows` overflow handling to `createLiveRenderer` for safe live updates.
+- Add overflow handling (`maxRows`) to `createLiveRenderer`, with optional scrollback clearing.
 
 ## 0.1.7 (2025-12-19)
 

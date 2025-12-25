@@ -147,4 +147,20 @@ describe("live renderer", () => {
 		expect(afterOverflow).toBeGreaterThanOrEqual(beforeOverflow);
 		expect(writes.length).toBe(afterOverflow);
 	});
+
+	it("clears scrollback when overflow is detected", () => {
+		const writes: string[] = [];
+		const live = createLiveRenderer({
+			write: (chunk) => writes.push(chunk),
+			renderFrame: (input) => input,
+			maxRows: 1,
+			clearScrollbackOnOverflow: true,
+		});
+
+		live.render("a");
+		live.render("a\nb");
+
+		const out = writes.join("");
+		expect(out).toContain("\u001b[3J\u001b[2J\u001b[H");
+	});
 });

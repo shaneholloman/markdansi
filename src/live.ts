@@ -42,6 +42,10 @@ export type LiveRendererOptions = {
 	 * Clear the previous frame when overflow is detected.
 	 */
 	clearOnOverflow?: boolean;
+	/**
+	 * Clear scrollback + screen when overflow is detected.
+	 */
+	clearScrollbackOnOverflow?: boolean;
 };
 
 const BSU = "\u001b[?2026h";
@@ -80,6 +84,7 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 			? Math.floor(options.maxRows)
 			: null;
 	const clearOnOverflow = options.clearOnOverflow !== false;
+	const clearScrollbackOnOverflow = options.clearScrollbackOnOverflow === true;
 
 	const countRows = (text: string): number => {
 		const lines = text.split("\n");
@@ -119,8 +124,23 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 		const newRows = countRows(rendered);
 		if (maxRows && newRows > maxRows) {
 			overflowed = true;
-			if (clearOnOverflow) {
-				clearFrame();
+			let frame = "";
+			if (hideCursor && !cursorHidden) {
+				frame += HIDE_CURSOR;
+				cursorHidden = true;
+			}
+			if (synchronizedOutput) frame += BSU;
+			if (clearScrollbackOnOverflow) {
+				frame += "\u001b[3J\u001b[2J\u001b[H";
+				previousRows = 0;
+			} else if (clearOnOverflow) {
+				frame += previousRows > 0 ? `${cursorUp(previousRows)}\r` : "\r";
+				frame += CLEAR_TO_END;
+				previousRows = 0;
+			}
+			if (synchronizedOutput) frame += ESU;
+			if (frame) {
+				options.write(frame);
 			}
 			options.onOverflow?.({ rows: newRows, maxRows });
 			return;
