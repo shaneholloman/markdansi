@@ -118,7 +118,7 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 		if (next === "[") {
 			let i = index + 2;
 			while (i < input.length) {
-				const c = input[i];
+				const c = input[i] ?? "";
 				if (c >= "@" && c <= "~") {
 					i += 1;
 					break;
@@ -130,7 +130,7 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 		if (next === "]") {
 			let i = index + 2;
 			while (i < input.length) {
-				const c = input[i];
+				const c = input[i] ?? "";
 				if (c === "\u0007") {
 					i += 1;
 					break;
