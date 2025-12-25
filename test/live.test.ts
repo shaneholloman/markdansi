@@ -163,4 +163,20 @@ describe("live renderer", () => {
 		const out = writes.join("");
 		expect(out).toContain("\u001b[3J\u001b[2J\u001b[H");
 	});
+
+	it("renders only the tail rows when tailRows is set", () => {
+		const writes: string[] = [];
+		const live = createLiveRenderer({
+			write: (chunk) => writes.push(chunk),
+			renderFrame: (input) => input,
+			tailRows: 2,
+		});
+
+		live.render("a\nb\nc");
+		const last = writes[writes.length - 1] ?? "";
+
+		expect(last).toContain("b\r\n");
+		expect(last).toContain("c\r\n");
+		expect(last).not.toContain("a\r\n");
+	});
 });

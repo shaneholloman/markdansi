@@ -56,6 +56,7 @@ const live = createLiveRenderer({
   renderFrame: (markdown) => render(markdown),
   write: process.stdout.write.bind(process.stdout),
   maxRows: process.stdout.rows,
+  tailRows: Math.max(12, (process.stdout.rows ?? 24) - 2),
   onOverflow: ({ rows, maxRows }) => {
     // Stop live rendering and fall back to a final print.
   },

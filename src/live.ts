@@ -35,6 +35,10 @@ export type LiveRendererOptions = {
 	 */
 	maxRows?: number;
 	/**
+	 * Render only the last N visual rows (tail mode).
+	 */
+	tailRows?: number;
+	/**
 	 * Invoked once when a render exceeds maxRows.
 	 */
 	onOverflow?: (info: { rows: number; maxRows: number }) => void;
@@ -68,6 +72,7 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 	let previousRows = 0;
 	let cursorHidden = false;
 	let overflowed = false;
+	let overflowNotified = false;
 
 	const synchronizedOutput = options.synchronizedOutput !== false;
 	const hideCursor = options.hideCursor !== false;
@@ -82,6 +87,12 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 		Number.isFinite(options.maxRows) &&
 		options.maxRows > 0
 			? Math.floor(options.maxRows)
+			: null;
+	const tailRows =
+		typeof options.tailRows === "number" &&
+		Number.isFinite(options.tailRows) &&
+		options.tailRows > 0
+			? Math.floor(options.tailRows)
 			: null;
 	const clearOnOverflow = options.clearOnOverflow !== false;
 	const clearScrollbackOnOverflow = options.clearScrollbackOnOverflow === true;
@@ -98,32 +109,122 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 		return rows;
 	};
 
-	const clearFrame = () => {
-		let frame = "";
-		if (hideCursor && !cursorHidden) {
-			frame += HIDE_CURSOR;
-			cursorHidden = true;
+	const extractAnsiToken = (
+		input: string,
+		index: number,
+	): { token: string; nextIndex: number } | null => {
+		if (input[index] !== "\u001b") return null;
+		const next = input[index + 1];
+		if (next === "[") {
+			let i = index + 2;
+			while (i < input.length) {
+				const c = input[i];
+				if (c >= "@" && c <= "~") {
+					i += 1;
+					break;
+				}
+				i += 1;
+			}
+			return { token: input.slice(index, i), nextIndex: i };
 		}
+		if (next === "]") {
+			let i = index + 2;
+			while (i < input.length) {
+				const c = input[i];
+				if (c === "\u0007") {
+					i += 1;
+					break;
+				}
+				if (c === "\u001b" && input[i + 1] === "\\") {
+					i += 2;
+					break;
+				}
+				i += 1;
+			}
+			return { token: input.slice(index, i), nextIndex: i };
+		}
+		if (typeof next === "string") {
+			return { token: input.slice(index, index + 2), nextIndex: index + 2 };
+		}
+		return { token: input[index], nextIndex: index + 1 };
+	};
 
-		if (synchronizedOutput) frame += BSU;
-		frame += previousRows > 0 ? `${cursorUp(previousRows)}\r` : "\r";
-		frame += CLEAR_TO_END;
-		if (synchronizedOutput) frame += ESU;
-		options.write(frame);
-		previousRows = 0;
+	const updateSgrState = (current: string, sequence: string): string => {
+		if (!sequence.startsWith("\u001b[") || !sequence.endsWith("m")) {
+			return current;
+		}
+		const body = sequence.slice(2, -1);
+		if (body.length === 0) return "";
+		const codes = body.split(";");
+		const hasReset = codes.includes("0");
+		if (hasReset) {
+			const hasNonReset = codes.some((code) => code !== "0");
+			return hasNonReset ? sequence : "";
+		}
+		return current + sequence;
+	};
+
+	const splitLineToRows = (
+		line: string,
+		activeSgr: string,
+	): { rows: string[]; activeSgr: string } => {
+		if (width <= 0) return { rows: [activeSgr + line], activeSgr };
+		let current = activeSgr;
+		let currentWidth = 0;
+		const rows: string[] = [];
+		let i = 0;
+		while (i < line.length) {
+			const ansi = extractAnsiToken(line, i);
+			if (ansi) {
+				current += ansi.token;
+				activeSgr = updateSgrState(activeSgr, ansi.token);
+				i = ansi.nextIndex;
+				continue;
+			}
+
+			const codePoint = line.codePointAt(i);
+			const ch = typeof codePoint === "number" ? String.fromCodePoint(codePoint) : "";
+			const w = stringWidth(ch);
+			if (currentWidth + w > width && currentWidth > 0) {
+				rows.push(current);
+				current = activeSgr;
+				currentWidth = 0;
+			}
+			current += ch;
+			currentWidth += w;
+			i += ch.length;
+		}
+		rows.push(current);
+		return { rows, activeSgr };
+	};
+
+	const splitToRows = (text: string): string[] => {
+		const lines = text.split("\n");
+		if (lines.length > 0 && lines.at(-1) === "") lines.pop();
+		let activeSgr = "";
+		const rows: string[] = [];
+		for (const line of lines) {
+			const result = splitLineToRows(line, activeSgr);
+			rows.push(...result.rows);
+			activeSgr = result.activeSgr;
+		}
+		if (rows.length === 0) rows.push("");
+		return rows;
 	};
 
 	const render = (input: string) => {
-		if (overflowed) return;
+		if (overflowed && !tailRows) return;
 		const renderedRaw = options.renderFrame(input);
 		const rendered = renderedRaw.endsWith("\n")
 			? renderedRaw
 			: `${renderedRaw}\n`;
-		const lines = rendered.split("\n");
-		if (lines.length > 0 && lines.at(-1) === "") lines.pop();
-		const newRows = countRows(rendered);
-		if (maxRows && newRows > maxRows) {
+		const totalRows = countRows(rendered);
+		if (maxRows && totalRows > maxRows && !overflowed) {
 			overflowed = true;
+			if (!overflowNotified) {
+				overflowNotified = true;
+				options.onOverflow?.({ rows: totalRows, maxRows });
+			}
 			let frame = "";
 			if (hideCursor && !cursorHidden) {
 				frame += HIDE_CURSOR;
@@ -142,8 +243,17 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 			if (frame) {
 				options.write(frame);
 			}
-			options.onOverflow?.({ rows: newRows, maxRows });
-			return;
+			if (!tailRows) return;
+		}
+
+		let renderLines = rendered.split("\n");
+		if (renderLines.length > 0 && renderLines.at(-1) === "") renderLines.pop();
+		let newRows = totalRows;
+		if (tailRows) {
+			const rows = splitToRows(rendered);
+			const sliced = rows.length > tailRows ? rows.slice(-tailRows) : rows;
+			renderLines = sliced;
+			newRows = sliced.length;
 		}
 
 		let frame = "";
@@ -155,7 +265,7 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 		if (synchronizedOutput) frame += BSU;
 		frame += previousRows > 0 ? `${cursorUp(previousRows)}\r` : "\r";
 		frame += CLEAR_TO_END;
-		for (const line of lines) {
+		for (const line of renderLines) {
 			frame += "\r";
 			frame += line;
 			frame += "\r\n";

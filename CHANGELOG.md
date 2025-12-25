@@ -2,7 +2,8 @@
 
 ## 0.1.8 (Unreleased)
 
-- Add overflow handling (`maxRows`) to `createLiveRenderer`, with optional scrollback clearing.
+- Add `tailRows` mode to `createLiveRenderer` to avoid scrollback duplication.
+- Add overflow handling (`maxRows`) with optional scrollback clearing.
 
 ## 0.1.7 (2025-12-19)
 
