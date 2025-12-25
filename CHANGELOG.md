@@ -2,7 +2,7 @@
 
 ## 0.1.8 (Unreleased)
 
-- _No changes yet._
+- Add `maxRows` overflow handling to `createLiveRenderer` for safe live updates.
 
 ## 0.1.7 (2025-12-19)
 

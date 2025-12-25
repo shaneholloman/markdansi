@@ -55,6 +55,11 @@ import { createLiveRenderer, render } from 'markdansi';
 const live = createLiveRenderer({
   renderFrame: (markdown) => render(markdown),
   write: process.stdout.write.bind(process.stdout),
+  maxRows: process.stdout.rows,
+  onOverflow: ({ rows, maxRows }) => {
+    // Stop live rendering and fall back to a final print.
+  },
+  clearOnOverflow: true,
 });
 
 let buffer = '';

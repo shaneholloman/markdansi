@@ -30,6 +30,18 @@ export type LiveRendererOptions = {
 	 * If omitted, defaults to 80.
 	 */
 	width?: number;
+	/**
+	 * Maximum number of rows to render in-place. If exceeded, live rendering stops.
+	 */
+	maxRows?: number;
+	/**
+	 * Invoked once when a render exceeds maxRows.
+	 */
+	onOverflow?: (info: { rows: number; maxRows: number }) => void;
+	/**
+	 * Clear the previous frame when overflow is detected.
+	 */
+	clearOnOverflow?: boolean;
 };
 
 const BSU = "\u001b[?2026h";
@@ -51,6 +63,7 @@ function cursorUp(lines: number): string {
 export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 	let previousRows = 0;
 	let cursorHidden = false;
+	let overflowed = false;
 
 	const synchronizedOutput = options.synchronizedOutput !== false;
 	const hideCursor = options.hideCursor !== false;
@@ -60,6 +73,13 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 		options.width > 0
 			? Math.floor(options.width)
 			: 80;
+	const maxRows =
+		typeof options.maxRows === "number" &&
+		Number.isFinite(options.maxRows) &&
+		options.maxRows > 0
+			? Math.floor(options.maxRows)
+			: null;
+	const clearOnOverflow = options.clearOnOverflow !== false;
 
 	const countRows = (text: string): number => {
 		const lines = text.split("\n");
@@ -73,7 +93,23 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 		return rows;
 	};
 
+	const clearFrame = () => {
+		let frame = "";
+		if (hideCursor && !cursorHidden) {
+			frame += HIDE_CURSOR;
+			cursorHidden = true;
+		}
+
+		if (synchronizedOutput) frame += BSU;
+		frame += previousRows > 0 ? `${cursorUp(previousRows)}\r` : "\r";
+		frame += CLEAR_TO_END;
+		if (synchronizedOutput) frame += ESU;
+		options.write(frame);
+		previousRows = 0;
+	};
+
 	const render = (input: string) => {
+		if (overflowed) return;
 		const renderedRaw = options.renderFrame(input);
 		const rendered = renderedRaw.endsWith("\n")
 			? renderedRaw
@@ -81,6 +117,14 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 		const lines = rendered.split("\n");
 		if (lines.length > 0 && lines.at(-1) === "") lines.pop();
 		const newRows = countRows(rendered);
+		if (maxRows && newRows > maxRows) {
+			overflowed = true;
+			if (clearOnOverflow) {
+				clearFrame();
+			}
+			options.onOverflow?.({ rows: newRows, maxRows });
+			return;
+		}
 
 		let frame = "";
 		if (hideCursor && !cursorHidden) {

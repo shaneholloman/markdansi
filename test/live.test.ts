@@ -124,4 +124,27 @@ describe("live renderer", () => {
 		live.finish();
 		expect(writes).toEqual([]);
 	});
+
+	it("stops rendering when maxRows is exceeded", () => {
+		const writes: string[] = [];
+		let overflow: { rows: number; maxRows: number } | null = null;
+		const live = createLiveRenderer({
+			write: (chunk) => writes.push(chunk),
+			renderFrame: (input) => input,
+			maxRows: 2,
+			onOverflow: (info) => {
+				overflow = info;
+			},
+		});
+
+		live.render("a\nb");
+		const beforeOverflow = writes.length;
+		live.render("a\nb\nc");
+		const afterOverflow = writes.length;
+		live.render("a");
+
+		expect(overflow).toEqual({ rows: 3, maxRows: 2 });
+		expect(afterOverflow).toBeGreaterThanOrEqual(beforeOverflow);
+		expect(writes.length).toBe(afterOverflow);
+	});
 });
