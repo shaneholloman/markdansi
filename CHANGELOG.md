@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.8 (Unreleased)
+## 0.2.0 (Unreleased)
 
 - Add `tailRows` mode to `createLiveRenderer` to avoid scrollback duplication.
 - Add overflow handling (`maxRows`) with optional scrollback clearing.
