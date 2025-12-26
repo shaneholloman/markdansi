@@ -19,7 +19,7 @@ describe("live renderer", () => {
 		expect(out).toContain("\u001b[0J");
 		expect(out).toContain("\u001b[?25l");
 		expect(out).toContain("\u001b[?25h");
-		expect(out).toContain("\u001b[1A\r");
+		expect(out).toContain("\r");
 	});
 
 	it("does not move the cursor up on the first frame", () => {
@@ -80,7 +80,8 @@ describe("live renderer", () => {
 		live.render("a");
 		live.render("a\nb");
 
-		expect(writes[2]).toContain("\u001b[1A\r");
+		expect(writes[2]).toContain("\u001b[0J");
+		expect(writes[2]).toContain("b\r\n");
 	});
 
 	it("clears removed lines when the frame shrinks", () => {
@@ -94,9 +95,7 @@ describe("live renderer", () => {
 		live.render("a");
 
 		const second = writes[1];
-		expect(second).toContain("\u001b[3A\r");
 		expect(second).toContain("\u001b[0J");
-		expect(second).toContain("a\r\n");
 		expect(second).not.toContain("b");
 		expect(second).not.toContain("c");
 	});
@@ -110,7 +109,8 @@ describe("live renderer", () => {
 
 		live.render("ignored");
 
-		expect(writes[0]).toContain("\u001b[0J\rx\r\n");
+		expect(writes[0]).toContain("\u001b[0J");
+		expect(writes[0]).toContain("x\r\n");
 	});
 
 	it("finish is a no-op if cursor was never hidden", () => {

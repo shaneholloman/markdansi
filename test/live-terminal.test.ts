@@ -28,6 +28,22 @@ function readTerminalLines(term: Terminal): string[] {
 	return normalizeLines(lines);
 }
 
+function readScrollbackLines(term: Terminal): string[] {
+	const buffer = term.buffer.active;
+	const lines: string[] = [];
+	const total = buffer.baseY + term.rows;
+	for (let row = 0; row < total; row += 1) {
+		const line = buffer.getLine(row);
+		const text = line ? line.translateToString(true) : "";
+		if (line?.isWrapped && lines.length > 0) {
+			lines[lines.length - 1] += text;
+			continue;
+		}
+		lines.push(text);
+	}
+	return normalizeLines(lines);
+}
+
 function expectedLines(markdown: string, cols: number): string[] {
 	const plain = strip(markdown, { width: cols, wrap: true, hyperlinks: false });
 	return normalizeLines(plain.split("\n"));
@@ -155,5 +171,37 @@ describe("live renderer terminal integration", () => {
 
 		const expected = expectedLines(markdown, cols).slice(-tailRows);
 		expect(readTerminalLines(term)).toEqual(expected);
+	});
+
+	it("appends new lines without duplicating scrollback", async () => {
+		const cols = 22;
+		const rows = 4;
+		const term = new Terminal({
+			cols,
+			rows,
+			scrollback: 200,
+			allowProposedApi: true,
+		});
+		const live = createLiveRenderer({
+			width: cols,
+			write: (chunk) => {
+				term.write(chunk);
+			},
+			renderFrame: (markdown) => markdown,
+		});
+
+		let markdown = "Line 1\nLine 2";
+		live.render(markdown);
+		await flushTerminal(term);
+
+		markdown = `${markdown}\nLine 3`;
+		live.render(markdown);
+		await flushTerminal(term);
+
+		markdown = `${markdown}\nLine 4\nLine 5`;
+		live.render(markdown);
+		await flushTerminal(term);
+
+		expect(readScrollbackLines(term)).toEqual(normalizeLines(markdown.split("\n")));
 	});
 });

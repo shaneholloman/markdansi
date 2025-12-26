@@ -1,5 +1,4 @@
 import stringWidth from "string-width";
-import stripAnsi from "strip-ansi";
 
 export type LiveRenderer = {
 	render: (input: string) => void;
@@ -69,7 +68,9 @@ function cursorUp(lines: number): string {
  * This is intentionally "terminal plumbing" and renderer-agnostic: you inject `renderFrame()`.
  */
 export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
-	let previousRows = 0;
+	let previousLines: string[] = [];
+	let previousLineHeights: number[] = [];
+	let cursorRow = 0;
 	let cursorHidden = false;
 	let overflowed = false;
 	let overflowNotified = false;
@@ -96,18 +97,6 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 			: null;
 	const clearOnOverflow = options.clearOnOverflow !== false;
 	const clearScrollbackOnOverflow = options.clearScrollbackOnOverflow === true;
-
-	const countRows = (text: string): number => {
-		const lines = text.split("\n");
-		if (lines.length > 0 && lines.at(-1) === "") lines.pop();
-		let rows = 0;
-		for (const line of lines) {
-			const visible = stripAnsi(line);
-			const w = stringWidth(visible);
-			rows += Math.max(1, Math.ceil(Math.max(0, w) / width));
-		}
-		return rows;
-	};
 
 	const extractAnsiToken = (
 		input: string,
@@ -212,48 +201,150 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 		return rows;
 	};
 
+	const visibleWidth = (line: string): number => {
+		let widthTotal = 0;
+		let i = 0;
+		while (i < line.length) {
+			const ansi = extractAnsiToken(line, i);
+			if (ansi) {
+				i = ansi.nextIndex;
+				continue;
+			}
+			const codePoint = line.codePointAt(i);
+			const ch = typeof codePoint === "number" ? String.fromCodePoint(codePoint) : "";
+			widthTotal += stringWidth(ch);
+			i += ch.length;
+		}
+		return widthTotal;
+	};
+
+	const lineRowCount = (line: string): number => {
+		if (width <= 0) return 1;
+		const w = visibleWidth(line);
+		return Math.max(1, Math.ceil(Math.max(0, w) / width));
+	};
+
+	const measureLines = (lines: string[]): number[] => lines.map(lineRowCount);
+
+	const sumRows = (heights: number[], endExclusive?: number): number => {
+		const end = typeof endExclusive === "number" ? endExclusive : heights.length;
+		let total = 0;
+		for (let i = 0; i < end; i += 1) total += heights[i] ?? 0;
+		return total;
+	};
+
 	const render = (input: string) => {
 		if (overflowed && !tailRows) return;
 		const renderedRaw = options.renderFrame(input);
 		const rendered = renderedRaw.endsWith("\n")
 			? renderedRaw
 			: `${renderedRaw}\n`;
-		const totalRows = countRows(rendered);
+		const rawLines = rendered.split("\n");
+		if (rawLines.length > 0 && rawLines.at(-1) === "") rawLines.pop();
+		if (rawLines.length === 0) rawLines.push("");
+		const rawHeights = measureLines(rawLines);
+		const totalRows = sumRows(rawHeights);
+		const renderLines = tailRows ? splitToRows(rendered) : rawLines;
+		const nextLines =
+			tailRows && renderLines.length > tailRows
+				? renderLines.slice(-tailRows)
+				: renderLines;
+		const nextHeights = tailRows ? nextLines.map(() => 1) : rawHeights;
+		const nextRows = tailRows ? nextLines.length : totalRows;
+		let clearMode: "scrollback" | "screen" | null = null;
+		let forceFullRender = previousLines.length === 0;
+
 		if (maxRows && totalRows > maxRows && !overflowed) {
 			overflowed = true;
 			if (!overflowNotified) {
 				overflowNotified = true;
 				options.onOverflow?.({ rows: totalRows, maxRows });
 			}
-			let frame = "";
-			if (hideCursor && !cursorHidden) {
-				frame += HIDE_CURSOR;
-				cursorHidden = true;
-			}
-			if (synchronizedOutput) frame += BSU;
 			if (clearScrollbackOnOverflow) {
-				frame += "\u001b[3J\u001b[2J\u001b[H";
-				previousRows = 0;
+				clearMode = "scrollback";
 			} else if (clearOnOverflow) {
-				frame += previousRows > 0 ? `${cursorUp(previousRows)}\r` : "\r";
-				frame += CLEAR_TO_END;
-				previousRows = 0;
+				clearMode = "screen";
 			}
-			if (synchronizedOutput) frame += ESU;
-			if (frame) {
-				options.write(frame);
+			if (!tailRows) {
+				let frame = "";
+				if (hideCursor && !cursorHidden) {
+					frame += HIDE_CURSOR;
+					cursorHidden = true;
+				}
+				if (synchronizedOutput) frame += BSU;
+				if (clearMode === "scrollback") {
+					frame += "\u001b[3J\u001b[2J\u001b[H";
+				} else if (clearMode === "screen") {
+					frame += cursorRow > 0 ? `${cursorUp(cursorRow)}\r` : "\r";
+					frame += CLEAR_TO_END;
+				}
+				if (synchronizedOutput) frame += ESU;
+				if (frame) {
+					options.write(frame);
+				}
+				previousLines = [];
+				previousLineHeights = [];
+				cursorRow = 0;
+				return;
 			}
-			if (!tailRows) return;
+			if (clearMode) {
+				forceFullRender = true;
+			}
 		}
 
-		let renderLines = rendered.split("\n");
-		if (renderLines.length > 0 && renderLines.at(-1) === "") renderLines.pop();
-		let newRows = totalRows;
-		if (tailRows) {
-			const rows = splitToRows(rendered);
-			const sliced = rows.length > tailRows ? rows.slice(-tailRows) : rows;
-			renderLines = sliced;
-			newRows = sliced.length;
+		if (!forceFullRender) {
+			let firstChanged = -1;
+			const maxLines = Math.max(previousLines.length, nextLines.length);
+			for (let i = 0; i < maxLines; i += 1) {
+				const oldLine = i < previousLines.length ? previousLines[i] : "";
+				const newLine = i < nextLines.length ? nextLines[i] : "";
+				if (oldLine !== newLine) {
+					firstChanged = i;
+					break;
+				}
+			}
+
+			if (firstChanged === -1) return;
+
+			if (maxRows) {
+				const firstChangedRow = sumRows(previousLineHeights, firstChanged);
+				const viewportTop = Math.max(0, cursorRow - maxRows);
+				if (firstChangedRow < viewportTop) {
+					forceFullRender = true;
+				}
+			}
+
+			if (!forceFullRender) {
+				let frame = "";
+				if (hideCursor && !cursorHidden) {
+					frame += HIDE_CURSOR;
+					cursorHidden = true;
+				}
+
+				if (synchronizedOutput) frame += BSU;
+				const firstChangedRow = sumRows(previousLineHeights, firstChanged);
+				const rowDiff = firstChangedRow - cursorRow;
+				if (rowDiff > 0) {
+					frame += `\u001b[${rowDiff}B`;
+				} else if (rowDiff < 0) {
+					frame += cursorUp(-rowDiff);
+				}
+				frame += "\r";
+				frame += CLEAR_TO_END;
+				for (let i = firstChanged; i < nextLines.length; i += 1) {
+					frame += "\r";
+					frame += nextLines[i];
+					frame += "\r\n";
+				}
+
+				if (synchronizedOutput) frame += ESU;
+				options.write(frame);
+
+				cursorRow = nextRows;
+				previousLines = nextLines;
+				previousLineHeights = nextHeights;
+				return;
+			}
 		}
 
 		let frame = "";
@@ -261,20 +352,23 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 			frame += HIDE_CURSOR;
 			cursorHidden = true;
 		}
-
 		if (synchronizedOutput) frame += BSU;
-		frame += previousRows > 0 ? `${cursorUp(previousRows)}\r` : "\r";
-		frame += CLEAR_TO_END;
-		for (const line of renderLines) {
+		if (clearMode === "scrollback") {
+			frame += "\u001b[3J\u001b[2J\u001b[H";
+		} else {
+			frame += cursorRow > 0 ? `${cursorUp(cursorRow)}\r` : "\r";
+			frame += CLEAR_TO_END;
+		}
+		for (let i = 0; i < nextLines.length; i += 1) {
 			frame += "\r";
-			frame += line;
+			frame += nextLines[i];
 			frame += "\r\n";
 		}
-
 		if (synchronizedOutput) frame += ESU;
 		options.write(frame);
-
-		previousRows = newRows;
+		cursorRow = nextRows;
+		previousLines = nextLines;
+		previousLineHeights = nextHeights;
 	};
 
 	const finish = () => {

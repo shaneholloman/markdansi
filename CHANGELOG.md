@@ -4,6 +4,7 @@
 
 - Add `tailRows` mode to `createLiveRenderer` to avoid scrollback duplication.
 - Add overflow handling (`maxRows`) with optional scrollback clearing.
+- Make live rendering diff-aware so only changed lines are updated, reducing scrollback churn.
 
 ## 0.1.7 (2025-12-19)
 
