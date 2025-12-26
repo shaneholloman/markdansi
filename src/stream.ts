@@ -87,10 +87,10 @@ function normalizeRenderedFragment(rendered: string): string {
 	// Markdansi intentionally prefixes some blocks (e.g. headings) with a newline when rendering
 	// whole documents. For streaming fragments, strip leading newlines to avoid double spacing.
 	const trimmedStart = rendered.replace(/^\n+/, "");
-	const withNewline = trimmedStart.endsWith("\n")
-		? trimmedStart
-		: `${trimmedStart}\n`;
-	return withNewline;
+	// For fragment streaming, normalize to a single trailing newline so spacing is controlled
+	// by the streamer (blank-line collapsing) rather than renderer block heuristics.
+	const trimmedEnd = trimmedStart.replace(/\n+$/, "");
+	return `${trimmedEnd}\n`;
 }
 
 export function createMarkdownStreamer(

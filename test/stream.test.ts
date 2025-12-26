@@ -48,6 +48,16 @@ describe("markdown streamer (hybrid)", () => {
 		expect(out).toContain("Heading\n");
 	});
 
+	it("does not introduce extra blank lines around headings", () => {
+		const s = createMarkdownStreamer({
+			render: renderNoColor,
+			spacing: "single",
+		});
+		const out =
+			s.push("## Overview\n\n- One\n\n## Key Evidence\n- Two\n") + s.finish();
+		expect(out).not.toContain("\n\n\n");
+	});
+
 	it("collapses consecutive blank lines in single spacing mode", () => {
 		const s = createMarkdownStreamer({
 			render: renderNoColor,
