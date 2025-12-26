@@ -64,7 +64,7 @@
 		"micromark-util-combine-extensions": "^2.0.1",
 		"string-width": "^8.1.0",
 		"strip-ansi": "^7.1.2",
-		"supports-hyperlinks": "^4.3.0"
+		"supports-hyperlinks": "^4.4.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.10",
