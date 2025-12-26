@@ -2,12 +2,8 @@
 
 ## 0.2.0 (Unreleased)
 
-- Add `tailRows` mode to `createLiveRenderer` to avoid scrollback duplication.
-- Add overflow handling (`maxRows`) with optional scrollback clearing.
-- Make live rendering diff-aware so only changed lines are updated, reducing scrollback churn.
-- Allow `finish(final)` to render the full frame after tail rendering (avoid truncated final output).
-- Add `appendWhenPossible` to grow scrollback when frames are prefix-appends.
-- Fix tail mode overflow accounting (use drawn rows) and ignore `appendWhenPossible` in tail mode.
+- Remove `createLiveRenderer` in favor of scrollback-safe, line-based streaming in callers.
+- Drop live-renderer terminal integration tests (in-place redraw is fragile across terminals).
 
 ## 0.1.7 (2025-12-19)
 

@@ -6,7 +6,7 @@
 
 ![npm](https://img.shields.io/npm/v/markdansi) ![license MIT](https://img.shields.io/badge/license-MIT-blue.svg) ![node >=22](https://img.shields.io/badge/node-%3E%3D22-brightgreen) ![tests vitest](https://img.shields.io/badge/tests-vitest-blue?logo=vitest)
 
-Tiny, dependency-light Markdown → ANSI renderer and CLI for modern Node (>=22). Focuses on readable terminal output with sensible wrapping, GFM support (tables, task lists, strikethrough), optional OSC‑8 hyperlinks, and zero built‑in syntax highlighting (pluggable hook). Includes live in-place terminal rendering for streaming updates (`createLiveRenderer`). Written in TypeScript, ships ESM.
+Tiny, dependency-light Markdown → ANSI renderer and CLI for modern Node (>=22). Focuses on readable terminal output with sensible wrapping, GFM support (tables, task lists, strikethrough), optional OSC‑8 hyperlinks, and zero built‑in syntax highlighting (pluggable hook). Written in TypeScript, ships ESM.
 
 Published on npm as `markdansi`.
 
@@ -46,42 +46,9 @@ const { render } = await import('markdansi');
 console.log(render('# hello'));
 ```
 
-### Live streaming / in-place rendering
-For streaming output (LLM responses, logs, progress), use `createLiveRenderer` to redraw in-place. Terminals do **not** expose scrollback/viewport state, so full-frame redraws can spam scrollback while the user scrolls.
-
-**Recommended: tail mode** — re-render only the last N visual rows. This keeps scrollback clean and avoids duplicate frames.
-
-```js
-import { createLiveRenderer, render } from 'markdansi';
-
-const rows = process.stdout.rows ?? 24;
-const maxRows = Math.max(1, rows - 1);
-const tailRows = Math.min(maxRows, Math.max(8, Math.min(24, Math.floor(rows / 2))));
-const live = createLiveRenderer({
-  renderFrame: (markdown) => render(markdown),
-  write: process.stdout.write.bind(process.stdout),
-  width: process.stdout.columns ?? 80,
-  tailRows,
-  maxRows,
-  onOverflow: () => {
-    // Stop live rendering and fall back to a final print.
-  },
-  clearOnOverflow: true,
-});
-
-let buffer = '';
-buffer += '# Hello\\n';
-live.render(buffer);
-buffer += '\\nMore…\\n';
-live.render(buffer);
-live.finish();
-```
-
-Notes:
-- **Full-frame redraw** (no `tailRows`) is fine for short output, but can duplicate scrollback while streaming.
-- **`maxRows`** should stay below the terminal height (reserve 1 row for the trailing newline).
-- **`clearScrollbackOnOverflow`** is destructive (clears history). Use only if you want a “TUI-like” reset.
-- For a true full-screen experience, manage the alternate screen buffer (`CSI ?1049h/l`) in your app.
+### Streaming (recommended: line-based)
+If you’re streaming Markdown (LLM output), keep scrollback safe by emitting **complete lines only**.
+Buffer until `\n`, then render each line independently and write it once.
 
 ```js
 import { render, createRenderer, strip, themes } from 'markdansi';
