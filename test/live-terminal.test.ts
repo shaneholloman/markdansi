@@ -122,4 +122,38 @@ describe("live renderer terminal integration", () => {
 		await flushTerminal(term);
 		expect(readTerminalLines(term)).toEqual(expectedLines(md2, cols));
 	});
+
+	it("keeps scrollback stable when tailRows is below the viewport", async () => {
+		const cols = 28;
+		const rows = 6;
+		const tailRows = rows - 1;
+		const term = new Terminal({
+			cols,
+			rows,
+			scrollback: 200,
+			allowProposedApi: true,
+		});
+		const live = createLiveRenderer({
+			width: cols,
+			maxRows: tailRows,
+			tailRows,
+			write: (chunk) => {
+				term.write(chunk);
+			},
+			renderFrame: (markdown) =>
+				render(markdown, { width: cols, wrap: true, hyperlinks: false }),
+		});
+
+		let markdown = "# Overview";
+		for (let i = 0; i < 12; i += 1) {
+			markdown += `\n- Streamed line ${i + 1} that keeps growing`;
+			live.render(markdown);
+			await flushTerminal(term);
+			// Ensure redraws stay in-place (no scrollback growth).
+			expect(term.buffer.active.baseY).toBe(0);
+		}
+
+		const expected = expectedLines(markdown, cols).slice(-tailRows);
+		expect(readTerminalLines(term)).toEqual(expected);
+	});
 });
