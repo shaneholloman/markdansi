@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 0.2.0 (2025-12-26)
 
 - **Streaming (hybrid blocks):** add `createMarkdownStreamer()` for append-only, scrollback-safe streaming.
