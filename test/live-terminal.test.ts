@@ -204,4 +204,37 @@ describe("live renderer terminal integration", () => {
 
 		expect(readScrollbackLines(term)).toEqual(normalizeLines(markdown.split("\n")));
 	});
+
+	it("renders the full frame on finish after tail updates", async () => {
+		const cols = 26;
+		const rows = 6;
+		const tailRows = 3;
+		const term = new Terminal({
+			cols,
+			rows,
+			scrollback: 200,
+			allowProposedApi: true,
+		});
+		const live = createLiveRenderer({
+			width: cols,
+			tailRows,
+			write: (chunk) => {
+				term.write(chunk);
+			},
+			renderFrame: (markdown) =>
+				render(markdown, { width: cols, wrap: true, hyperlinks: false }),
+		});
+
+		let markdown = "# Overview";
+		for (let i = 0; i < 8; i += 1) {
+			markdown += `\n- Line ${i + 1} with extra text to wrap`;
+			live.render(markdown);
+			await flushTerminal(term);
+		}
+
+		live.finish(markdown);
+		await flushTerminal(term);
+
+		expect(readScrollbackLines(term)).toEqual(expectedLines(markdown, cols));
+	});
 });
