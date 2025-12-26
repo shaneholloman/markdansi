@@ -179,4 +179,22 @@ describe("live renderer", () => {
 		expect(last).toContain("c\r\n");
 		expect(last).not.toContain("a\r\n");
 	});
+
+	it("appends when the rendered frame grows by prefix", () => {
+		const writes: string[] = [];
+		const live = createLiveRenderer({
+			write: (chunk) => writes.push(chunk),
+			renderFrame: (input) => input,
+			appendWhenPossible: true,
+		});
+
+		live.render("hello\n");
+		live.render("hello\nworld\n");
+
+		expect(writes[0]).toContain("\u001b[0J");
+		expect(writes[1]).not.toContain("\u001b[0J");
+		const out = writes.join("");
+		expect(out).toContain("hello");
+		expect(out).toContain("world");
+	});
 });

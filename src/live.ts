@@ -38,6 +38,11 @@ export type LiveRendererOptions = {
 	 */
 	tailRows?: number;
 	/**
+	 * Append new output when the rendered frame only grows (prefix match).
+	 * Falls back to live diff rendering when content reflows.
+	 */
+	appendWhenPossible?: boolean;
+	/**
 	 * Invoked once when a render exceeds maxRows.
 	 */
 	onOverflow?: (info: { rows: number; maxRows: number }) => void;
@@ -97,6 +102,8 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 			: null;
 	const clearOnOverflow = options.clearOnOverflow !== false;
 	const clearScrollbackOnOverflow = options.clearScrollbackOnOverflow === true;
+	const appendWhenPossible = options.appendWhenPossible === true;
+	let previousRenderedRaw = "";
 
 	const extractAnsiToken = (
 		input: string,
@@ -254,6 +261,37 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 		let clearMode: "scrollback" | "screen" | null = null;
 		let forceFullRender = previousLines.length === 0;
 
+		if (
+			appendWhenPossible &&
+			previousRenderedRaw &&
+			rendered.startsWith(previousRenderedRaw)
+		) {
+			const appended = rendered.slice(previousRenderedRaw.length);
+			if (appended.length > 0) {
+				const normalized = appended.replace(/\r?\n/g, "\r\n");
+				let frame = "";
+				if (hideCursor && !cursorHidden) {
+					frame += HIDE_CURSOR;
+					cursorHidden = true;
+				}
+				if (synchronizedOutput) frame += BSU;
+				frame += normalized;
+				if (synchronizedOutput) frame += ESU;
+				options.write(frame);
+			}
+			previousRenderedRaw = rendered;
+			if (tailRows) {
+				previousLines = nextLines;
+				previousLineHeights = nextHeights;
+				cursorRow = nextRows;
+			} else {
+				previousLines = rawLines;
+				previousLineHeights = rawHeights;
+				cursorRow = totalRows;
+			}
+			return;
+		}
+
 		if (maxRows && totalRows > maxRows && !overflowed) {
 			overflowed = true;
 			if (!overflowNotified) {
@@ -343,6 +381,7 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 				cursorRow = nextRows;
 				previousLines = nextLines;
 				previousLineHeights = nextHeights;
+				previousRenderedRaw = rendered;
 				return;
 			}
 		}
@@ -369,6 +408,7 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 		cursorRow = nextRows;
 		previousLines = nextLines;
 		previousLineHeights = nextHeights;
+		previousRenderedRaw = rendered;
 	};
 
 	const finish = (final?: string) => {
@@ -404,6 +444,7 @@ export function createLiveRenderer(options: LiveRendererOptions): LiveRenderer {
 			cursorRow = nextRows;
 			previousLines = nextLines;
 			previousLineHeights = nextHeights;
+			previousRenderedRaw = rendered;
 		}
 		if (hideCursor && cursorHidden) {
 			options.write(SHOW_CURSOR);

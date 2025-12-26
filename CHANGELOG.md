@@ -6,6 +6,7 @@
 - Add overflow handling (`maxRows`) with optional scrollback clearing.
 - Make live rendering diff-aware so only changed lines are updated, reducing scrollback churn.
 - Allow `finish(final)` to render the full frame after tail rendering (avoid truncated final output).
+- Add `appendWhenPossible` to grow scrollback when frames are prefix-appends.
 
 ## 0.1.7 (2025-12-19)
 

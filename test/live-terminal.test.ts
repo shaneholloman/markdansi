@@ -184,6 +184,7 @@ describe("live renderer terminal integration", () => {
 		});
 		const live = createLiveRenderer({
 			width: cols,
+			appendWhenPossible: true,
 			write: (chunk) => {
 				term.write(chunk);
 			},
@@ -202,6 +203,7 @@ describe("live renderer terminal integration", () => {
 		live.render(markdown);
 		await flushTerminal(term);
 
+		expect(term.buffer.active.baseY).toBeGreaterThan(0);
 		expect(readScrollbackLines(term)).toEqual(normalizeLines(markdown.split("\n")));
 	});
 
