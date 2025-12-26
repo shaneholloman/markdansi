@@ -239,4 +239,41 @@ describe("live renderer terminal integration", () => {
 
 		expect(readScrollbackLines(term)).toEqual(expectedLines(markdown, cols));
 	});
+
+	it("falls back to tail updates when reflow breaks prefix append", async () => {
+		const cols = 24;
+		const rows = 6;
+		const tailRows = 3;
+		const term = new Terminal({
+			cols,
+			rows,
+			scrollback: 200,
+			allowProposedApi: true,
+		});
+		const live = createLiveRenderer({
+			width: cols,
+			tailRows,
+			appendWhenPossible: true,
+			write: (chunk) => {
+				term.write(chunk);
+			},
+			renderFrame: (markdown) =>
+				render(markdown, { width: cols, wrap: true, hyperlinks: false }),
+		});
+
+		const md1 = "# Overview\n\n- This line is short.";
+		const md2 =
+			"# Overview\n\n- This line is short, but now it grows enough to wrap.";
+
+		live.render(md1);
+		await flushTerminal(term);
+		const baseYAfterFirst = term.buffer.active.baseY;
+
+		live.render(md2);
+		await flushTerminal(term);
+
+		expect(term.buffer.active.baseY).toBe(baseYAfterFirst);
+		const expectedTail = expectedLines(md2, cols).slice(-tailRows);
+		expect(readTerminalLines(term)).toEqual(expectedTail);
+	});
 });
