@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { strip } from "../src/index.ts";
+import { render, strip } from "../src/index.ts";
 
 const noColor = { color: false, hyperlinks: false, wrap: true, width: 40 };
 
@@ -187,6 +187,19 @@ describe("tables", () => {
 `;
     const out = strip(md, { ...noColor, width: 18, wrap: true });
     expect(out).toContain("…");
+  });
+
+  it("closes ANSI styling when truncating a styled cell", () => {
+    const md = "| Col |\n|---|\n| *averylongemphasizedwordthatexceedscol* |\n";
+    const out = render(md, { color: true, hyperlinks: false, wrap: true, width: 30 });
+    const ITALIC_ON = "[3m";
+    const ITALIC_OFF = "[23m";
+    const RESET = "[0m";
+    const open = out.lastIndexOf(ITALIC_ON);
+    expect(open).toBeGreaterThanOrEqual(0);
+    // The italic opened in the truncated cell must be closed before output ends.
+    const closed = out.indexOf(ITALIC_OFF, open) !== -1 || out.indexOf(RESET, open) !== -1;
+    expect(closed).toBe(true);
   });
 
   it("keeps at least ellipsis when width extremely small", () => {
