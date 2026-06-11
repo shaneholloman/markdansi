@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.3.2 - Unreleased
+
 ## 0.3.1 (2026-06-11)
 
 - Replace the unified/micromark parser graph with Marked and use one TypeScript compiler, substantially reducing install size and package count.
