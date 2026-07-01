@@ -1,8 +1,8 @@
 # Changelog
 
-## 0.3.2 - Unreleased
+## 0.3.2 (2026-07-01)
 
-- CLI: apply documented table/code rendering flags and reject invalid, missing, or unknown options with clear errors.
+- CLI: apply documented table/code rendering flags and reject invalid, missing, or unknown options with clear errors (#7).
 
 ## 0.3.1 (2026-06-11)
 
